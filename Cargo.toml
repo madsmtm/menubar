@@ -5,3 +5,4 @@ authors = ["Mads Marquart <mads@marquart.dk>"]
 edition = "2018"
 
 [dependencies]
+winapi = {version = "0.3", features = ["winuser", "libloaderapi", "wincon"]}
