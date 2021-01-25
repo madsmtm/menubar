@@ -1,0 +1,7 @@
+[package]
+name = "menubar"
+version = "0.0.1"
+authors = ["Mads Marquart <mads@marquart.dk>"]
+edition = "2018"
+
+[dependencies]
