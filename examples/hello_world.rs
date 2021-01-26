@@ -65,6 +65,69 @@ fn main() -> Result<(), Box<dyn Error>> {
         child.join().unwrap();
     }
 
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::ffi::OsStrExt;
+        use std::{ffi, mem, ptr};
+        use winapi::shared::basetsd;
+        use winapi::shared::minwindef;
+        use winapi::shared::ntdef;
+        use winapi::shared::windef;
+        use winapi::um::errhandlingapi;
+        use winapi::um::winuser;
+
+        let hwnd = match window.raw_window_handle() {
+            RawWindowHandle::Windows(handle) => dbg!(handle.hwnd as windef::HWND),
+            _ => unreachable!(),
+        };
+
+        let hmenu = unsafe { dbg!(winuser::CreateMenu()) };
+
+        let mut menu_text = ffi::OsStr::new("test")
+            .encode_wide()
+            .chain(Some(0).into_iter())
+            .collect::<Vec<_>>();
+
+        dbg!(&menu_text);
+
+        let state = winuser::MFS_ENABLED | winuser::MFS_UNCHECKED | winuser::MFS_UNHILITE;
+
+        let menuiteminfo = winuser::MENUITEMINFOW {
+            cbSize: mem::size_of::<winuser::MENUITEMINFOW>() as minwindef::UINT,
+            fMask: winuser::MIIM_STRING,         // | winuser::MIIM_TYPE,
+            fType: 0,  // Maybe: winuser::MFT_STRING,     // Type set in fMask for now
+            fState: 0, // Normal item. Also not MFS_DEFAULT
+            wID: 0,    // Don't use ids
+            hSubMenu: ptr::null_mut(), // Not a submenu
+            hbmpChecked: ptr::null_mut(), // Would allow customizing the checked icon
+            hbmpUnchecked: ptr::null_mut(), // Would allow customizing the unchecked icon
+            dwItemData: 0 as basetsd::ULONG_PTR, // Used to specify a custom icon w. hbmpItem (I think...)
+            dwTypeData: menu_text.as_mut_ptr() as ntdef::LPWSTR,
+            cch: 0,
+            hbmpItem: ptr::null_mut(), // Would allow customizing an icon in general
+        };
+
+        dbg!(
+            menuiteminfo.cbSize,
+            menuiteminfo.fMask,
+            menuiteminfo.fType,
+            menuiteminfo.dwTypeData,
+            menuiteminfo.cch
+        );
+
+        let ptr: winuser::LPCMENUITEMINFOW = (&menuiteminfo as *const winuser::MENUITEMINFOW);
+
+        // Insert menu item at position 0
+        unsafe { dbg!(winuser::InsertMenuItemW(hmenu, 0xffff, minwindef::TRUE, ptr) != 0) };
+
+        let last_error_code = unsafe { dbg!(errhandlingapi::GetLastError()) };
+
+        // No need to manually redraw the menu after this!
+        unsafe { dbg!(winuser::SetMenu(hwnd, hmenu) != 0) };
+
+        let last_error_code = unsafe { dbg!(errhandlingapi::GetLastError()) };
+    }
+
     let window = window;
 
     println!("hello world");
