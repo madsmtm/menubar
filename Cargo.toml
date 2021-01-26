@@ -5,4 +5,13 @@ authors = ["Mads Marquart <mads@marquart.dk>"]
 edition = "2018"
 
 [dependencies]
-winapi = {version = "0.3", features = ["winuser", "libloaderapi", "wincon"]}
+winit = { version = "0.24", path = "../winit" }
+raw-window-handle = "0.3"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+cocoa = "0.24"
+core-foundation = "0.9"
+objc = "0.2"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["winuser", "libloaderapi", "wincon"] }
