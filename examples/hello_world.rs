@@ -7,6 +7,8 @@ use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::error::Error;
 #[cfg(target_os = "macos")]
 use winit::platform::macos::WindowBuilderExtMacOS;
+#[cfg(target_os = "windows")]
+use winit::platform::windows::WindowBuilderExtWindows;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -28,12 +30,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         dbg!(2, app);
     });
 
-    let event_loop = EventLoop::new();
-    let builder = WindowBuilder::new().with_title("test");
-    #[cfg(target_os = "macos")]
-    let builder = builder.with_activation_policy(winit::platform::macos::ActivationPolicy::Regular);
-    let window = builder.build(&event_loop)?;
-
     #[cfg(target_os = "macos")]
     {
         use cocoa::appkit::{
@@ -42,12 +38,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         };
         use cocoa::base::nil;
         use cocoa::foundation::NSAutoreleasePool;
-
-        let window_ptr = match window.raw_window_handle() {
-            RawWindowHandle::MacOS(handle) => handle.ns_window,
-            _ => unreachable!(),
-        };
-        dbg!(4, window_ptr);
 
         // Get a reference to the
         let app = unsafe { NSApp() };
@@ -66,7 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     #[cfg(target_os = "windows")]
-    {
+    let menu = {
         use std::os::windows::ffi::OsStrExt;
         use std::{ffi, mem, ptr};
         use winapi::shared::basetsd;
@@ -76,12 +66,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         use winapi::um::errhandlingapi;
         use winapi::um::winuser;
 
-        let hwnd = match window.raw_window_handle() {
-            RawWindowHandle::Windows(handle) => dbg!(handle.hwnd as windef::HWND),
-            _ => unreachable!(),
-        };
-
-        let hmenu = unsafe { dbg!(winuser::CreateMenu()) };
+        let menu = unsafe { dbg!(winuser::CreateMenu()) };
 
         let mut menu_text = ffi::OsStr::new("test")
             .encode_wide()
@@ -118,17 +103,31 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ptr: winuser::LPCMENUITEMINFOW = (&menuiteminfo as *const winuser::MENUITEMINFOW);
 
         // Insert menu item at position 0
-        unsafe { dbg!(winuser::InsertMenuItemW(hmenu, 0xffff, minwindef::TRUE, ptr) != 0) };
+        if unsafe { winuser::InsertMenuItemW(menu, 0xffff, minwindef::TRUE, ptr) } == 0 {
+            unsafe { dbg!(errhandlingapi::GetLastError()) };
+        }
 
-        let last_error_code = unsafe { dbg!(errhandlingapi::GetLastError()) };
+        menu
+    };
 
-        // No need to manually redraw the menu after this!
-        unsafe { dbg!(winuser::SetMenu(hwnd, hmenu) != 0) };
+    let event_loop = EventLoop::new();
+    let builder = WindowBuilder::new()
+        .with_title("test")
+        .with_inner_size(winit::dpi::LogicalSize::new(800, 640));
+    #[cfg(target_os = "macos")]
+    let builder = builder.with_activation_policy(winit::platform::macos::ActivationPolicy::Regular);
+    #[cfg(target_os = "windows")]
+    let builder = builder
+        .with_menu(menu)
+        .with_theme(Some(winit::window::Theme::Light));
+    let window = builder.build(&event_loop)?;
 
-        let last_error_code = unsafe { dbg!(errhandlingapi::GetLastError()) };
-    }
+    #[cfg(target_os = "windows")]
+    if let RawWindowHandle::Windows(handle) = window.raw_window_handle() {
+        unsafe { dbg!(handle.hinstance, winapi::um::errhandlingapi::GetLastError()) };
+    };
 
-    let window = window;
+    dbg!(window.inner_size());
 
     println!("hello world");
 
