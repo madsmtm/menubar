@@ -1,7 +1,8 @@
 #![windows_subsystem = "windows"]
+#![allow(unused_imports)] // While testing
 
 #[cfg(target_os = "macos")]
-use objc::msg_send;
+use objc::{class, msg_send, sel, sel_impl};
 
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::error::Error;
@@ -10,7 +11,7 @@ use winit::platform::macos::WindowBuilderExtMacOS;
 #[cfg(target_os = "windows")]
 use winit::platform::windows::WindowBuilderExtWindows;
 use winit::{
-    event::{Event, WindowEvent},
+    event::{Event, StartCause, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -22,38 +23,38 @@ fn main() -> Result<(), Box<dyn Error>> {
         AttachConsole(ATTACH_PARENT_PROCESS);
     }
 
-    #[cfg(target_os = "macos")]
-    let child = std::thread::spawn(move || {
-        let app = unsafe { cocoa::appkit::NSApp() };
-        dbg!(1, app);
-        std::thread::sleep(std::time::Duration::from_millis(500));
-        dbg!(2, app);
-    });
+    // #[cfg(target_os = "macos")]
+    // let child = std::thread::spawn(move || {
+    //     let app = unsafe { cocoa::appkit::NSApp() };
+    //     dbg!(1, app);
+    //     std::thread::sleep(std::time::Duration::from_millis(500));
+    //     dbg!(2, app);
+    // });
 
-    #[cfg(target_os = "macos")]
-    {
-        use cocoa::appkit::{
-            NSApp, NSApplication, NSApplicationActivationPolicyRegular, NSEventModifierFlags,
-            NSMenu, NSMenuItem,
-        };
-        use cocoa::base::nil;
-        use cocoa::foundation::NSAutoreleasePool;
+    // #[cfg(target_os = "macos")]
+    // {
+    //     use cocoa::appkit::{
+    //         NSApp, NSApplication, NSApplicationActivationPolicyRegular, NSEventModifierFlags,
+    //         NSMenu, NSMenuItem,
+    //     };
+    //     use cocoa::base::nil;
+    //     use cocoa::foundation::NSAutoreleasePool;
 
-        // Get a reference to the
-        let app = unsafe { NSApp() };
-        dbg!(3, app);
-        // Don't bother ensuring the activation policy is Regular!
+    //     // Get a reference to the app
+    //     let app = unsafe { NSApp() };
+    //     dbg!(3, app);
+    //     // Don't bother ensuring the activation policy is Regular!
 
-        let pool = unsafe { NSAutoreleasePool::new(nil) };
+    //     let pool = unsafe { NSAutoreleasePool::new(nil) };
 
-        // let menubar = NSMenu::new(nil).autorelease();
+    //     // let menubar = NSMenu::new(nil).autorelease();
 
-        // app.setMainMenu_(menubar);
+    //     // app.setMainMenu_(menubar);
 
-        unsafe { pool.drain() };
+    //     unsafe { pool.drain() };
 
-        child.join().unwrap();
-    }
+    //     child.join().unwrap();
+    // }
 
     #[cfg(target_os = "windows")]
     let menu = {
@@ -111,6 +112,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let event_loop = EventLoop::new();
+
     let builder = WindowBuilder::new()
         .with_title("test")
         .with_inner_size(winit::dpi::LogicalSize::new(800, 640));
@@ -129,12 +131,42 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     dbg!(window.inner_size());
 
-    println!("hello world");
+    println!("before event loop");
 
     event_loop.run(|event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
 
         match event {
+            Event::NewEvents(StartCause::Init) => {
+                #[cfg(target_os = "macos")]
+                {
+                    use cocoa::appkit::{NSApp, NSApplication};
+                    use menubar::macos::menu::Menu;
+                    use menubar::macos::menuitem::MenuItem;
+
+                    let mut submenu = Menu::new("submenu 🤪©æ"); // Title irrelevant!
+                    submenu.add(MenuItem::new("submenu item 1 🤖", "", || unimplemented!()));
+                    submenu.add(MenuItem::new("submenu item 2", "", || unimplemented!()));
+
+                    let mut item = MenuItem::new("item w. submenu", "", || unimplemented!());
+                    item.set_submenu(Some(submenu));
+
+                    let mut menu = Menu::new("menu");
+                    menu.add(MenuItem::new("item 1", "", || unimplemented!()));
+                    menu.add(MenuItem::new("item 2", "", || unimplemented!()));
+                    menu.add(item);
+                    menu.add(MenuItem::new("item 4", "", || unimplemented!()));
+
+                    let mut menubar_item = MenuItem::new("menubar item", "", || unimplemented!());
+                    menubar_item.set_submenu(Some(menu));
+
+                    let mut menubar = Menu::new("menubar");
+                    menubar.add(menubar_item);
+
+                    let app = unsafe { NSApp() };
+                    unsafe { app.setMainMenu_(menubar.as_raw()) };
+                };
+            }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 ..
@@ -151,6 +183,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // applications which do not always need to. Applications that redraw continuously
                 // can just render here instead.
                 // window.request_redraw();
+                println!("MainEventsCleared");
             }
             Event::RedrawRequested(_) => {
                 // Redraw the application.
