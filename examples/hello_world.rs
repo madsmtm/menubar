@@ -144,24 +144,51 @@ fn main() -> Result<(), Box<dyn Error>> {
                     use menubar::macos::menu::Menu;
                     use menubar::macos::menuitem::MenuItem;
 
-                    let mut submenu = Menu::new("submenu 🤪©æ"); // Title irrelevant!
-                    submenu.add(MenuItem::new("submenu item 1 🤖", "", || unimplemented!()));
-                    submenu.add(MenuItem::new("submenu item 2", "", || unimplemented!()));
-
-                    let mut item = MenuItem::new("item w. submenu", "", || unimplemented!());
-                    item.set_submenu(Some(submenu));
-
-                    let mut menu = Menu::new("menu");
-                    menu.add(MenuItem::new("item 1", "", || unimplemented!()));
-                    menu.add(MenuItem::new("item 2", "", || unimplemented!()));
-                    menu.add(item);
-                    menu.add(MenuItem::new("item 4", "", || unimplemented!()));
-
-                    let mut menubar_item = MenuItem::new("menubar item", "", || unimplemented!());
-                    menubar_item.set_submenu(Some(menu));
-
                     let mut menubar = Menu::new("menubar");
-                    menubar.add(menubar_item);
+                    menubar.add({
+                        let mut menubar_item =
+                            MenuItem::new("menubar item 1", "", || unimplemented!()); // Title irrelevant
+                        menubar_item.set_submenu({
+                            let mut menu = Menu::new("menu 1");
+                            menu.add(MenuItem::new("item 1", "", || unimplemented!()));
+                            menu.add(MenuItem::new("item 2", "", || unimplemented!()));
+                            menu.add({
+                                let mut item =
+                                    MenuItem::new("item w. submenu", "", || unimplemented!());
+                                item.set_submenu({
+                                    let mut submenu = Menu::new("submenu 🤪©æ"); // Title irrelevant!
+                                    submenu.add(MenuItem::new(
+                                        "submenu item 1 🤖",
+                                        "",
+                                        || unimplemented!(),
+                                    ));
+                                    submenu.add(MenuItem::new(
+                                        "submenu item 2",
+                                        "",
+                                        || unimplemented!(),
+                                    ));
+                                    Some(submenu)
+                                });
+                                item
+                            });
+                            menu.add(MenuItem::new("item 4", "", || unimplemented!()));
+                            Some(menu)
+                        });
+                        menubar_item
+                    });
+
+                    menubar.add({
+                        let mut menubar_item =
+                            MenuItem::new("menubar item 2", "a", || unimplemented!()); // Title irrelevant
+                        menubar_item.set_submenu({
+                            let mut menu = Menu::new("menu 2");
+                            menu.add(MenuItem::new("item 1", "b", || unimplemented!()));
+                            menu.add(MenuItem::new("item 2", "c", || unimplemented!()));
+                            menu.add(MenuItem::new("item 3", "d", || unimplemented!()));
+                            Some(menu)
+                        });
+                        menubar_item
+                    });
 
                     let app = unsafe { NSApp() };
                     unsafe { app.setMainMenu_(menubar.as_raw()) };

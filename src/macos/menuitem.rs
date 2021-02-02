@@ -26,9 +26,9 @@ impl MenuItem {
     }
 
     // Probably not: fn new() -> Self {unimplemented!()}
-    pub fn new(title: &str, _key_equivalent: &str, _action: impl Fn() -> ()) -> Self {
+    pub fn new(title: &str, key_equivalent: &str, _action: impl Fn() -> ()) -> Self {
         let title = to_nsstring(title);
-        let key_equivalent = to_nsstring("");
+        let key_equivalent = to_nsstring(key_equivalent);
         let item = unsafe {
             msg_send![Self::alloc(), initWithTitle:title action:nil keyEquivalent:key_equivalent]
         };
