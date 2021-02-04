@@ -30,7 +30,8 @@ impl Menu {
         Menu(menu)
     }
 
-    pub fn new_with_title(title: &str) -> Self {
+    // Public only locally to allow for construction in Menubar
+    pub(super) fn new_with_title(title: &str) -> Self {
         let title = to_nsstring(title);
         let menu = unsafe { msg_send![Self::alloc(), initWithTitle: title] };
         assert_ne!(menu, nil);

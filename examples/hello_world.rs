@@ -144,57 +144,40 @@ fn main() -> Result<(), Box<dyn Error>> {
                 #[cfg(target_os = "macos")]
                 {
                     use cocoa::appkit::{NSApp, NSApplication};
+                    use menubar::macos::menubar::MenuBar;
                     use menubar::macos::menu::Menu;
                     use menubar::macos::menuitem::{MenuItem, MenuItemState};
 
-                    let mut menubar = Menu::new_with_title("menubar"); // Title irrelevant
-                    menubar.add({
-                        let mut menubar_item =
-                            MenuItem::new("menubar item 1", "", || unimplemented!()); // Title irrelevant
-                        menubar_item.set_submenu({
-                            let mut menu = Menu::new_with_title("menu 1"); // Title irrelevant on first item
-                            menu.add(MenuItem::new("item 1", "", || unimplemented!()));
-                            menu.add(MenuItem::new("item 2", "", || unimplemented!()));
-                            menu.add({
-                                let mut item =
-                                    MenuItem::new("item w. submenu", "", || unimplemented!());
-                                item.set_submenu({
-                                    let mut submenu = Menu::new_with_title("submenu 🤪©æ"); // Title irrelevant!
-                                    submenu.add(MenuItem::new(
-                                        "submenu item 1 🤖",
-                                        "",
-                                        || unimplemented!(),
-                                    ));
-                                    submenu.add(MenuItem::new(
-                                        "submenu item 2",
-                                        "",
-                                        || unimplemented!(),
-                                    ));
-                                    Some(submenu)
-                                });
-                                item.set_state(MenuItemState::On);
-                                item
+                    let mut menubar = MenuBar::new(|menu| {
+                        menu.add(MenuItem::new("item 1", "", || unimplemented!()));
+                        menu.add(MenuItem::new("item 2", "", || unimplemented!()));
+                        menu.add({
+                            let mut item =
+                                MenuItem::new("item w. submenu", "", || unimplemented!());
+                            item.set_submenu({
+                                let mut submenu = Menu::new();
+                                submenu.add(MenuItem::new(
+                                    "submenu item 1 🤖",
+                                    "",
+                                    || unimplemented!(),
+                                ));
+                                submenu.add(MenuItem::new(
+                                    "submenu item 2",
+                                    "",
+                                    || unimplemented!(),
+                                ));
+                                Some(submenu)
                             });
-                            menu.add(MenuItem::new("item 4", "", || unimplemented!()));
-                            Some(menu)
+                            item.set_state(MenuItemState::On);
+                            item
                         });
-                        menubar_item
+                        menu.add(MenuItem::new("item 4", "", || unimplemented!()));
                     });
 
-                    menubar.add({
-                        let mut menubar_item =
-                            MenuItem::new("menubar item 2", "a", || unimplemented!()); // All parameters irrelevant
-
-                        // unsafe { msg_send![menubar_item.as_raw(), setEnabled] };
-                        menubar_item.set_state(MenuItemState::Mixed);
-                        menubar_item.set_submenu({
-                            let mut menu = Menu::new_with_title("menu 2");
-                            menu.add(MenuItem::new("item 1", "b", || unimplemented!()));
-                            menu.add(MenuItem::new("item 2", "c", || unimplemented!()));
-                            menu.add(MenuItem::new("item 3", "d", || unimplemented!()));
-                            Some(menu)
-                        });
-                        menubar_item
+                    menubar.add("menu 2", |menu| {
+                        menu.add(MenuItem::new("item 1", "b", || unimplemented!()));
+                        menu.add(MenuItem::new("item 2", "c", || unimplemented!()));
+                        menu.add(MenuItem::new("item 3", "d", || unimplemented!()));
                     });
 
                     let app = unsafe { NSApp() };

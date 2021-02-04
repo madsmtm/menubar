@@ -27,6 +27,13 @@ impl MenuItem {
         unsafe { msg_send![class!(NSMenuItem), alloc] }
     }
 
+    // Public only locally to allow for construction in Menubar
+    pub(super) fn new_empty() -> Self {
+        let item = unsafe { msg_send![Self::alloc(), init] };
+        assert_ne!(item, nil);
+        MenuItem(item)
+    }
+
     // Probably not: fn new() -> Self {unimplemented!()}
     pub fn new(title: &str, key_equivalent: &str, _action: impl Fn() -> ()) -> Self {
         let title = to_nsstring(title);
