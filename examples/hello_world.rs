@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             menu.add(MenuItem::new("item 1", "a", || unimplemented!()));
             menu.add(MenuItem::new("item 2", "b", || unimplemented!()));
             menu.add({
-                // Unsure how key equivalents affect this
+                // Unsure how key equivalents affect submenuitems???
                 let mut item = MenuItem::new("item w. submenu", "c", || unimplemented!());
                 item.set_submenu({
                     let mut submenu = Menu::new();
@@ -53,6 +53,89 @@ fn main() -> Result<(), Box<dyn Error>> {
             menu.add(MenuItem::new("item 1", "g", || unimplemented!()));
             menu.add(MenuItem::new("item 2", "h", || unimplemented!()));
             menu.add(MenuItem::new("item 3", "i", || unimplemented!()));
+        });
+
+        menubar.add("Duplicate key equvalent", |menu| {
+            menu.add(MenuItem::new("item 1", "j", || unimplemented!()));
+            menu.add(MenuItem::new("item 2", "j", || unimplemented!()));
+        });
+
+        menubar.add("Submenus gallore", |menu| {
+            menu.add({
+                let mut item = MenuItem::new("Item 1", "", || unimplemented!());
+                item.set_submenu({
+                    let mut submenu = Menu::new();
+                    submenu.add(MenuItem::new("Item 1 : 1", "", || unimplemented!()));
+                    submenu.add(MenuItem::new("Item 1 : 2", "", || unimplemented!()));
+                    submenu.add({
+                        let mut submenuitem = MenuItem::new("Item 1 : 3", "", || unimplemented!());
+                        submenuitem.set_submenu({
+                            let mut submenu2 = Menu::new();
+                            submenu2.add(MenuItem::new("Item 1 : 3 : 1", "", || unimplemented!()));
+                            submenu2.add({
+                                let mut submenuitem2 =
+                                    MenuItem::new("Item 1 : 3 : 2", "", || unimplemented!());
+                                submenuitem2.set_submenu({
+                                    let mut submenu3 = Menu::new();
+                                    let mut submenuitem3 = MenuItem::new(
+                                        "Item 1 : 3 : 2 : 1",
+                                        "",
+                                        || unimplemented!(),
+                                    );
+                                    submenuitem3.set_state(MenuItemState::On);
+                                    submenu3.add(submenuitem3);
+                                    submenu3.add(MenuItem::new(
+                                        "Item 1 : 3 : 2 : 2",
+                                        "k",
+                                        || unimplemented!(),
+                                    ));
+                                    Some(submenu3)
+                                });
+                                submenuitem2
+                            });
+                            submenu2.add(MenuItem::new("Item 1 : 3 : 3", "", || unimplemented!()));
+                            Some(submenu2)
+                        });
+                        submenuitem.set_state(MenuItemState::Mixed);
+                        submenuitem
+                    });
+                    Some(submenu)
+                });
+                item.set_state(MenuItemState::On);
+                item
+            });
+            menu.add({
+                let mut item = MenuItem::new("Item 2", "", || unimplemented!());
+                item.set_submenu({
+                    let mut submenu = Menu::new();
+                    submenu.add(MenuItem::new("Item 2 : 1", "", || unimplemented!()));
+                    submenu.add(MenuItem::new("Item 2 : 2", "", || unimplemented!()));
+                    Some(submenu)
+                });
+                item
+            });
+        });
+
+        menubar.add("Empty menu", |_| {});
+
+        menubar.add("Menu with a really loooooooooooong name!", |menu| {
+            menu.add(MenuItem::new("Item with a really loooooooooooong name!", "", || unimplemented!()));
+            menu.add(MenuItem::new("Item with an even looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonger name!", "", || unimplemented!()));
+            menu.add(MenuItem::new("Item with the looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooongest name!", "", || unimplemented!()));
+        });
+
+        menubar.add("A lot of items", |menu| {
+            for i in 1..=100 {
+                menu.add(MenuItem::new(
+                    &format!("item {}", i),
+                    "",
+                    || unimplemented!(),
+                ));
+            }
+        });
+
+        menubar.add("This menu text is truncated on smaller screens since there's too many long menus already!", |menu| {
+            menu.add(MenuItem::new("item", "", || unimplemented!()));
         });
 
         menubar
