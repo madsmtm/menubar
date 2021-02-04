@@ -7,9 +7,11 @@ struct Target; // Normal NSObject. Should return YES in worksWhenModal.
 struct ActionSelector; // objc::Sel - a method selector
 struct Image;
 
-enum MenuItemState {
+pub enum MenuItemState {
+    /// Checked
     On,
     Mixed,
+    /// Unchecked
     Off,
 }
 
@@ -97,13 +99,30 @@ impl MenuItem {
         unimplemented!()
     }
 
-    // State
-
-    fn state(&self) -> MenuItemState {
-        unimplemented!()
+    /// Get the menu item's state
+    pub fn state(&self) -> MenuItemState {
+        let state: isize = unsafe { msg_send![self.0, state] };
+        match state {
+            1 => MenuItemState::On,
+            -1 => MenuItemState::Mixed,
+            0 => MenuItemState::Off,
+            _ => unreachable!(),
+        }
     }
-    fn set_state(&mut self, state: MenuItemState) {
-        unimplemented!()
+
+    /// Set the menu item's state
+    pub fn set_state(&mut self, state: MenuItemState) {
+        // TODO: Link or something to these?
+        // static const NSControlStateValue NSControlStateValueMixed = -1;
+        // static const NSControlStateValue NSControlStateValueOff = 0;
+        // static const NSControlStateValue NSControlStateValueOn = 1;
+
+        let state = match state {
+            MenuItemState::On => 1,
+            MenuItemState::Mixed => -1,
+            MenuItemState::Off => 0,
+        };
+        unsafe { msg_send![self.0, setState: state as isize] }
     }
 
     // Images

@@ -1,9 +1,9 @@
 #![windows_subsystem = "windows"]
 #![allow(unused_imports)] // While testing
 
+use env_logger;
 #[cfg(target_os = "macos")]
 use objc::{class, msg_send, sel, sel_impl};
-
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::error::Error;
 #[cfg(target_os = "macos")]
@@ -11,7 +11,7 @@ use winit::platform::macos::WindowBuilderExtMacOS;
 #[cfg(target_os = "windows")]
 use winit::platform::windows::WindowBuilderExtWindows;
 use winit::{
-    event::{Event, StartCause, WindowEvent},
+    event::{DeviceEvent, Event, StartCause, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -22,6 +22,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         use winapi::um::wincon::{AttachConsole, ATTACH_PARENT_PROCESS};
         AttachConsole(ATTACH_PARENT_PROCESS);
     }
+
+    env_logger::init();
 
     // #[cfg(target_os = "macos")]
     // let child = std::thread::spawn(move || {
@@ -138,25 +140,26 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         match event {
             Event::NewEvents(StartCause::Init) => {
+                dbg!("Init");
                 #[cfg(target_os = "macos")]
                 {
                     use cocoa::appkit::{NSApp, NSApplication};
                     use menubar::macos::menu::Menu;
-                    use menubar::macos::menuitem::MenuItem;
+                    use menubar::macos::menuitem::{MenuItem, MenuItemState};
 
-                    let mut menubar = Menu::new("menubar");
+                    let mut menubar = Menu::new_with_title("menubar"); // Title irrelevant
                     menubar.add({
                         let mut menubar_item =
                             MenuItem::new("menubar item 1", "", || unimplemented!()); // Title irrelevant
                         menubar_item.set_submenu({
-                            let mut menu = Menu::new("menu 1");
+                            let mut menu = Menu::new_with_title("menu 1"); // Title irrelevant on first item
                             menu.add(MenuItem::new("item 1", "", || unimplemented!()));
                             menu.add(MenuItem::new("item 2", "", || unimplemented!()));
                             menu.add({
                                 let mut item =
                                     MenuItem::new("item w. submenu", "", || unimplemented!());
                                 item.set_submenu({
-                                    let mut submenu = Menu::new("submenu 🤪©æ"); // Title irrelevant!
+                                    let mut submenu = Menu::new_with_title("submenu 🤪©æ"); // Title irrelevant!
                                     submenu.add(MenuItem::new(
                                         "submenu item 1 🤖",
                                         "",
@@ -169,6 +172,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                                     ));
                                     Some(submenu)
                                 });
+                                item.set_state(MenuItemState::On);
                                 item
                             });
                             menu.add(MenuItem::new("item 4", "", || unimplemented!()));
@@ -179,9 +183,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                     menubar.add({
                         let mut menubar_item =
-                            MenuItem::new("menubar item 2", "a", || unimplemented!()); // Title irrelevant
+                            MenuItem::new("menubar item 2", "a", || unimplemented!()); // All parameters irrelevant
+
+                        // unsafe { msg_send![menubar_item.as_raw(), setEnabled] };
+                        menubar_item.set_state(MenuItemState::Mixed);
                         menubar_item.set_submenu({
-                            let mut menu = Menu::new("menu 2");
+                            let mut menu = Menu::new_with_title("menu 2");
                             menu.add(MenuItem::new("item 1", "b", || unimplemented!()));
                             menu.add(MenuItem::new("item 2", "c", || unimplemented!()));
                             menu.add(MenuItem::new("item 3", "d", || unimplemented!()));
@@ -210,7 +217,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // applications which do not always need to. Applications that redraw continuously
                 // can just render here instead.
                 // window.request_redraw();
-                println!("MainEventsCleared");
             }
             Event::RedrawRequested(_) => {
                 // Redraw the application.
@@ -225,7 +231,26 @@ fn main() -> Result<(), Box<dyn Error>> {
                     winapi::um::wincon::FreeConsole()
                 };
             }
-            _ => (),
+            Event::DeviceEvent {
+                event: DeviceEvent::MouseMotion { .. },
+                ..
+            } => (),
+            Event::DeviceEvent {
+                event: DeviceEvent::Motion { .. },
+                ..
+            } => (),
+            Event::WindowEvent {
+                event: WindowEvent::CursorMoved { .. },
+                ..
+            } => (),
+            Event::NewEvents(StartCause::WaitCancelled {
+                requested_resume: None,
+                ..
+            }) => (),
+            Event::RedrawEventsCleared => (),
+            _ => {
+                dbg!(&event);
+            }
         }
     });
 }

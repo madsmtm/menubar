@@ -10,7 +10,6 @@ struct USize {
     width: f64,
 }
 
-#[repr(transparent)]
 pub struct Menu(id);
 
 impl Menu {
@@ -25,9 +24,13 @@ impl Menu {
         self.0
     }
 
-    // We could probably make a plain "new" method if we wanted
+    pub fn new() -> Self {
+        let menu = unsafe { msg_send![Self::alloc(), init] };
+        assert_ne!(menu, nil);
+        Menu(menu)
+    }
 
-    pub fn new(title: &str) -> Self {
+    pub fn new_with_title(title: &str) -> Self {
         let title = to_nsstring(title);
         let menu = unsafe { msg_send![Self::alloc(), initWithTitle: title] };
         assert_ne!(menu, nil);
