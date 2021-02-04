@@ -25,6 +25,39 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     env_logger::init();
 
+    #[cfg(target_os = "macos")]
+    let menubar = {
+        use menubar::macos::menu::Menu;
+        use menubar::macos::menubar::MenuBar;
+        use menubar::macos::menuitem::{MenuItem, MenuItemState};
+
+        let mut menubar = MenuBar::new(|menu| {
+            menu.add(MenuItem::new("item 1", "a", || unimplemented!()));
+            menu.add(MenuItem::new("item 2", "b", || unimplemented!()));
+            menu.add({
+                // Unsure how key equivalents affect this
+                let mut item = MenuItem::new("item w. submenu", "c", || unimplemented!());
+                item.set_submenu({
+                    let mut submenu = Menu::new();
+                    submenu.add(MenuItem::new("submenu item 1 🤖", "d", || unimplemented!()));
+                    submenu.add(MenuItem::new("submenu item 2", "e", || unimplemented!()));
+                    Some(submenu)
+                });
+                item.set_state(MenuItemState::On);
+                item
+            });
+            menu.add(MenuItem::new("item 4", "f", || unimplemented!()));
+        });
+
+        menubar.add("menu 2", |menu| {
+            menu.add(MenuItem::new("item 1", "g", || unimplemented!()));
+            menu.add(MenuItem::new("item 2", "h", || unimplemented!()));
+            menu.add(MenuItem::new("item 3", "i", || unimplemented!()));
+        });
+
+        menubar
+    };
+
     // #[cfg(target_os = "macos")]
     // let child = std::thread::spawn(move || {
     //     let app = unsafe { cocoa::appkit::NSApp() };
@@ -135,53 +168,24 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("before event loop");
 
-    event_loop.run(|event, _, control_flow| {
+    event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Wait;
 
         match event {
             Event::NewEvents(StartCause::Init) => {
                 dbg!("Init");
                 #[cfg(target_os = "macos")]
-                {
+                unsafe {
                     use cocoa::appkit::{NSApp, NSApplication};
-                    use menubar::macos::menubar::MenuBar;
-                    use menubar::macos::menu::Menu;
-                    use menubar::macos::menuitem::{MenuItem, MenuItemState};
+                    use cocoa::base::id;
 
-                    let mut menubar = MenuBar::new(|menu| {
-                        menu.add(MenuItem::new("item 1", "", || unimplemented!()));
-                        menu.add(MenuItem::new("item 2", "", || unimplemented!()));
-                        menu.add({
-                            let mut item =
-                                MenuItem::new("item w. submenu", "", || unimplemented!());
-                            item.set_submenu({
-                                let mut submenu = Menu::new();
-                                submenu.add(MenuItem::new(
-                                    "submenu item 1 🤖",
-                                    "",
-                                    || unimplemented!(),
-                                ));
-                                submenu.add(MenuItem::new(
-                                    "submenu item 2",
-                                    "",
-                                    || unimplemented!(),
-                                ));
-                                Some(submenu)
-                            });
-                            item.set_state(MenuItemState::On);
-                            item
-                        });
-                        menu.add(MenuItem::new("item 4", "", || unimplemented!()));
-                    });
-
-                    menubar.add("menu 2", |menu| {
-                        menu.add(MenuItem::new("item 1", "b", || unimplemented!()));
-                        menu.add(MenuItem::new("item 2", "c", || unimplemented!()));
-                        menu.add(MenuItem::new("item 3", "d", || unimplemented!()));
-                    });
-
-                    let app = unsafe { NSApp() };
-                    unsafe { app.setMainMenu_(menubar.as_raw()) };
+                    dbg!(menubar.as_raw());
+                    let app = NSApp();
+                    let main_menu: id = msg_send![app, mainMenu];
+                    dbg!(main_menu);
+                    app.setMainMenu_(menubar.as_raw());
+                    let main_menu: id = msg_send![app, mainMenu];
+                    dbg!(main_menu);
                 };
             }
             Event::WindowEvent {
@@ -209,6 +213,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // the program to gracefully handle redraws requested by the OS.
             }
             Event::LoopDestroyed => {
+                dbg!("Loop destroyed");
                 #[cfg(target_os = "windows")]
                 unsafe {
                     winapi::um::wincon::FreeConsole()
