@@ -3,12 +3,7 @@
 
 use env_logger;
 #[cfg(target_os = "macos")]
-use menubar::macos::{
-    menu::Menu,
-    menubar::MenuBar,
-    menuitem::{MenuItem, MenuItemState},
-    InitializedApplication,
-};
+use menubar::macos::{InitializedApplication, Menu, MenuBar, MenuItem, MenuItemState};
 #[cfg(target_os = "macos")]
 use objc::{class, msg_send, sel, sel_impl};
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
@@ -270,7 +265,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 dbg!("Init");
                 #[cfg(target_os = "macos")]
                 {
-                    let app = unsafe {InitializedApplication::new()};
+                    let app = unsafe { InitializedApplication::new() };
                     app.set_menubar_visible(true);
                     app.set_menubar(&menubar);
                     unsafe { assert_eq!(menubar.as_raw(), app.menubar().unwrap().as_raw()) };
@@ -291,8 +286,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             } => {
                 #[cfg(target_os = "macos")]
                 {
-                    let app = unsafe {InitializedApplication::new()};
-                    use menubar::macos::menubar::MenuBar;
+                    let app = unsafe { InitializedApplication::new() };
                     if state == ElementState::Pressed {
                         app.set_menubar_visible(true);
                         dbg!(app.menubar_visible());

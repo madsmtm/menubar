@@ -4,9 +4,9 @@ use super::menuitem::MenuItem;
 use super::util::to_nsstring;
 use cocoa::appkit::{CGFloat, NSApp, NSApplication};
 use cocoa::base::{id, nil};
-use objc::runtime::{BOOL, NO, YES, Class};
-use objc::{class, msg_send, sel, sel_impl};
 use core::marker::PhantomData;
+use objc::runtime::{Class, BOOL, NO, YES};
+use objc::{class, msg_send, sel, sel_impl};
 
 /// Helper tp make various global functions safe
 pub struct InitializedApplication {
@@ -16,7 +16,7 @@ pub struct InitializedApplication {
 impl InitializedApplication {
     /// SAFETY: Must not be called before `applicationDidFinishLaunching` has run!
     pub unsafe fn new() -> Self {
-        InitializedApplication{_p: PhantomData}
+        InitializedApplication { _p: PhantomData }
     }
 
     pub fn menubar(&self) -> Option<MenuBar> {
@@ -44,7 +44,7 @@ impl InitializedApplication {
     /// Might silently fail to set the menubar visible if in fullscreen mode or similar.
     pub fn set_menubar_visible(&self, visible: bool) {
         let visible: BOOL = if visible { YES } else { NO };
-        unsafe {msg_send![class!(NSMenu), setMenuBarVisible: visible] }
+        unsafe { msg_send![class!(NSMenu), setMenuBarVisible: visible] }
     }
 
     // Only available on the global menu bar object

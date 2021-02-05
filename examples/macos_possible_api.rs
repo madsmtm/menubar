@@ -1,4 +1,4 @@
-use menubar::{Menu, MenuBar, MenuItem};
+use menubar::macos::{Menu, MenuBar, MenuItem};
 
 fn main() {
     // Dynamic content
