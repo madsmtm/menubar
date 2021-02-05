@@ -138,10 +138,27 @@ fn main() -> Result<(), Box<dyn Error>> {
                     || unimplemented!(),
                 ));
             }
+            assert_eq!(menu.len(), 100);
         });
 
         menubar.add("This menu text is truncated on smaller screens since there's too many long menus already!", |menu| {
             menu.add(MenuItem::new("item", "", || unimplemented!()));
+        });
+
+        menubar.add("Length tests", |menu| {
+            assert_eq!(menu.len(), 0);
+            menu.add(MenuItem::new("item", "", || unimplemented!()));
+            assert_eq!(menu.len(), 1);
+            menu.remove_all();
+            assert_eq!(menu.len(), 0);
+        });
+
+        menubar.add("Insert tests", |menu| {
+            menu.add(MenuItem::new("item 4", "", || unimplemented!()));
+            menu.insert(MenuItem::new("item 3", "", || unimplemented!()), 0);
+            menu.insert(MenuItem::new("item 1", "", || unimplemented!()), 0);
+            menu.insert(MenuItem::new("item 2", "", || unimplemented!()), 1);
+            menu.insert(MenuItem::new("item 5", "", || unimplemented!()), 4);
         });
 
         menubar

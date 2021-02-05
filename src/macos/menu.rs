@@ -47,14 +47,21 @@ impl Menu {
 
     // Managing items
 
-    pub fn insert(&mut self, item: MenuItem, at: usize) {
+    /// Insert an item at the specified index.
+    ///
+    /// Panics if `index > menu.len()`.
+    pub fn insert(&mut self, item: MenuItem, index: usize) {
+        let length = self.len();
+        if index > length {
+            panic!("Failed inserting item: Index {} larger than number of items {}", index, length);
+        }
         // SAFETY:
         // - Ids are valid
         // - The item must not exist in another menu!!!!!
         //     - We need to ensure this somehow, for now we'll just consume the item!
-
-        // assert!(at < self.len())
-        unsafe { msg_send![self.0, insertItem: item.as_raw() atIndex: at as NSInteger] }
+        //     - Should maybe return a reference to the menu, where the reference is now bound to self?
+        // - 0 <= index <= self.len()
+        unsafe { msg_send![self.0, insertItem: item.as_raw() atIndex: index as NSInteger] }
     }
     pub fn add(&mut self, item: MenuItem) {
         // Same safety concerns as above
@@ -62,6 +69,7 @@ impl Menu {
     }
     // There exists `addItemWithTitle_action_keyEquivalent`
 
+    // Can't use this yet, we need to find a way to let users have references to menu items safely!
     // fn remove(&mut self, item: &MenuItem) {
     //     unsafe { msg_send![self.0, removeItem: item.as_raw()] }
     // }
@@ -86,9 +94,11 @@ impl Menu {
     unsafe fn get_at_index(&self, at: isize) -> &MenuItem {
         unimplemented!()
     }
-    fn number_of_items(&self) -> isize {
-        unimplemented!()
-    } // Including separators
+    // Number of items in this menu, including separators
+    pub fn len(&self) -> usize {
+        let number_of_items: NSInteger = unsafe { msg_send![self.0, numberOfItems] };
+        number_of_items as usize
+    }
     fn get_all_items(&self) -> &[&MenuItem] {
         unimplemented!()
     }
