@@ -33,7 +33,29 @@ fn main() -> Result<(), Box<dyn Error>> {
     let menubar = {
         let mut menubar = MenuBar::new(|menu| {
             menu.add(MenuItem::new("item 1", "a", || unimplemented!()));
-            menu.add(MenuItem::new("item 2", "b", || unimplemented!()));
+            let mut item = unsafe {
+                MenuItem::from_raw(msg_send![class!(NSMenuItem), separatorItem])
+            };
+            unsafe {
+                let _: () = msg_send![menu.as_raw(), setAutoenablesItems: 0];
+            }
+            unsafe {
+                let _: () = msg_send![item.as_raw(), setEnabled: 1];
+            }
+            item.set_state(MenuItemState::On);
+            item.set_title("xyz");
+            item.set_hidden(true);
+            item.set_submenu({
+                let mut submenu = Menu::new();
+                submenu.add(MenuItem::new("submenu item", "d", || unimplemented!()));
+                Some(submenu)
+            });
+            menu.add(item);
+            let item = MenuItem::new("item 2", "b", || unimplemented!());
+            unsafe {
+                let _: () = msg_send![item.as_raw(), setEnabled: 1];
+            }
+            menu.add(item);
             menu.add({
                 // Unsure how key equivalents affect submenuitems???
                 let mut item = MenuItem::new("item w. submenu", "c", || unimplemented!());

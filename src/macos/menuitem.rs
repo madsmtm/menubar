@@ -18,6 +18,15 @@ pub enum MenuItemState {
     Off,
 }
 
+// #[derive(Debug)]
+// pub enum MenuItemEnum {
+//     Separator(MenuSeparator),
+//     Item(MenuItem),
+// }
+
+// #[derive(Debug)]
+// pub struct MenuSeparator(id);
+
 #[derive(Debug)]
 pub struct MenuItem(id);
 
@@ -52,6 +61,11 @@ impl MenuItem {
     pub unsafe fn as_raw(&self) -> id {
         // TMP
         self.0
+    }
+
+    pub unsafe fn from_raw(item: id) -> Self {
+        // TMP
+        Self(item)
     }
 
     // Enabling
