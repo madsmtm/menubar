@@ -1,5 +1,5 @@
 use super::menu::Menu;
-use super::menuitem::MenuItem;
+use super::menuitem::{MenuElement, MenuItem};
 use super::util::to_nsstring;
 use cocoa::base::{id, nil};
 use objc::{class, msg_send, sel, sel_impl};
@@ -35,7 +35,7 @@ impl MenuBar {
         // All parameters on menu items irrelevant in the menu bar
         let mut item = MenuItem::new_empty();
         item.set_submenu(Some(menu));
-        self.0.add(item);
+        self.0.add(MenuElement::Item(item));
     }
 
     pub fn add(&mut self, title: &str, f: impl FnOnce(&mut Menu) -> ()) {

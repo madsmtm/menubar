@@ -1,6 +1,5 @@
 use super::menu::Menu;
 use super::menubar::MenuBar;
-use super::menuitem::MenuItem;
 use super::util::to_nsstring;
 use cocoa::appkit::{CGFloat, NSApp, NSApplication};
 use cocoa::base::{id, nil};

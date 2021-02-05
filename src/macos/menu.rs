@@ -1,5 +1,5 @@
-use super::menuitem::MenuItem;
-use super::util::{to_nsstring, from_nsstring};
+use super::menuitem::{MenuElement, MenuItem};
+use super::util::{from_nsstring, to_nsstring};
 use cocoa::base::{id, nil};
 use cocoa::foundation::NSInteger;
 use objc::{class, msg_send, sel, sel_impl};
@@ -62,10 +62,13 @@ impl Menu {
     /// Insert an item at the specified index.
     ///
     /// Panics if `index > menu.len()`.
-    pub fn insert(&mut self, item: MenuItem, index: usize) {
+    pub fn insert(&mut self, item: MenuElement, index: usize) {
         let length = self.len();
         if index > length {
-            panic!("Failed inserting item: Index {} larger than number of items {}", index, length);
+            panic!(
+                "Failed inserting item: Index {} larger than number of items {}",
+                index, length
+            );
         }
         // SAFETY:
         // - Ids are valid
@@ -75,14 +78,14 @@ impl Menu {
         // - 0 <= index <= self.len()
         unsafe { msg_send![self.0, insertItem: item.as_raw() atIndex: index as NSInteger] }
     }
-    pub fn add(&mut self, item: MenuItem) {
+    pub fn add(&mut self, item: MenuElement) {
         // Same safety concerns as above
         unsafe { msg_send![self.0, addItem: item.as_raw()] }
     }
     // There exists `addItemWithTitle_action_keyEquivalent`
 
     // Can't use this yet, we need to find a way to let users have references to menu items safely!
-    // fn remove(&mut self, item: &MenuItem) {
+    // fn remove(&mut self, item: &MenuElement) {
     //     unsafe { msg_send![self.0, removeItem: item.as_raw()] }
     // }
     // fn remove_at_index(&mut self, at: isize) {
@@ -103,7 +106,7 @@ impl Menu {
     fn find_by_title<'a>(&'a self, title: &str) -> Option<&'a MenuItem> {
         unimplemented!()
     }
-    unsafe fn get_at_index(&self, at: isize) -> &MenuItem {
+    unsafe fn get_at_index(&self, at: isize) -> &MenuElement {
         unimplemented!()
     }
     // Number of items in this menu, including separators
@@ -111,19 +114,19 @@ impl Menu {
         let number_of_items: NSInteger = unsafe { msg_send![self.0, numberOfItems] };
         number_of_items as usize
     }
-    fn get_all_items(&self) -> &[&MenuItem] {
+    fn get_all_items(&self) -> &[&MenuElement] {
         unimplemented!()
     }
 
-    // Finding indices of items
+    // Finding indices of elements
 
-    fn index_of_item(&self, item: &MenuItem) -> Option<isize> {
+    fn index_of(&self, item: &MenuElement) -> Option<isize> {
         unimplemented!()
     }
-    fn index_of_item_by_title(&self, title: &str) -> Option<isize> {
+    fn index_of_by_title(&self, title: &str) -> Option<isize> {
         unimplemented!()
     }
-    fn index_of_item_by_tag(&self, tag: isize) -> Option<isize> {
+    fn index_of_by_tag(&self, tag: isize) -> Option<isize> {
         unimplemented!()
     }
     // fn index_of_by_action_and_target(&self, ...) -> isize {}

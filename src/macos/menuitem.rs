@@ -1,8 +1,8 @@
 use super::menu::Menu;
-use super::util::{to_nsstring, from_nsstring};
+use super::util::{from_nsstring, to_nsstring};
 use cocoa::base::{id, nil};
-use objc::runtime::{BOOL, NO, YES};
 use cocoa::foundation::NSInteger;
+use objc::runtime::{BOOL, NO, YES};
 use objc::{class, msg_send, sel, sel_impl};
 
 struct Target; // Normal NSObject. Should return YES in worksWhenModal.
@@ -18,14 +18,71 @@ pub enum MenuItemState {
     Off,
 }
 
-// #[derive(Debug)]
-// pub enum MenuItemEnum {
-//     Separator(MenuSeparator),
-//     Item(MenuItem),
-// }
+#[derive(Debug)]
+pub enum MenuElement {
+    Separator(MenuSeparator),
+    Item(MenuItem),
+}
 
-// #[derive(Debug)]
-// pub struct MenuSeparator(id);
+impl MenuElement {
+    pub unsafe fn as_raw(&self) -> id {
+        // TMP
+        match self {
+            Self::Separator(separator) => separator.as_raw(),
+            Self::Item(item) => item.as_raw(),
+        }
+    }
+    pub unsafe fn from_raw(element: id) -> Self {
+        // TMP
+        let is_separator: BOOL = msg_send![element, separatorItem];
+        if is_separator != NO {
+            Self::Separator(MenuSeparator::from_raw(element))
+        } else {
+            Self::Item(MenuItem::from_raw(element))
+        }
+    }
+
+    pub fn hidden(&self) -> bool {
+        match self {
+            Self::Separator(separator) => separator.hidden(),
+            Self::Item(item) => item.hidden(),
+        }
+    }
+    pub fn set_hidden(&mut self, hidden: bool) {
+        match self {
+            Self::Separator(separator) => separator.set_hidden(hidden),
+            Self::Item(item) => item.set_hidden(hidden),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct MenuSeparator(id);
+
+impl MenuSeparator {
+    pub fn new() -> Self {
+        let separator: id = unsafe { msg_send![class!(NSMenuItem), separatorItem] };
+        assert_ne!(separator, nil);
+        Self(separator)
+    }
+
+    pub unsafe fn as_raw(&self) -> id {
+        // TMP
+        self.0
+    }
+
+    pub unsafe fn from_raw(separator: id) -> Self {
+        // TMP
+        Self(separator)
+    }
+
+    pub fn hidden(&self) -> bool {
+        unimplemented!() // Same impl as MenuItem
+    }
+    pub fn set_hidden(&mut self, hidden: bool) {
+        unimplemented!() // Same impl as MenuItem
+    }
+}
 
 #[derive(Debug)]
 pub struct MenuItem(id);
@@ -44,7 +101,7 @@ impl MenuItem {
     pub(super) fn new_empty() -> Self {
         let item: id = unsafe { msg_send![Self::alloc(), init] };
         assert_ne!(item, nil);
-        MenuItem(item)
+        Self(item)
     }
 
     // Probably not: fn new() -> Self {unimplemented!()}
@@ -55,7 +112,7 @@ impl MenuItem {
             msg_send![Self::alloc(), initWithTitle:title action:nil keyEquivalent:key_equivalent]
         };
         assert_ne!(item, nil);
-        MenuItem(item)
+        Self(item)
     }
 
     pub unsafe fn as_raw(&self) -> id {
@@ -190,18 +247,9 @@ impl MenuItem {
     fn has_submenu(&self) -> bool {
         unimplemented!()
     }
-    fn parent_item(&self) -> &MenuItem {
+    fn parent_item(&self) -> Option<&MenuItem> {
         unimplemented!()
     } // The parent submenu's menuitem
-
-    // Separator item
-
-    fn is_separator(&self) -> bool {
-        unimplemented!()
-    } // Default false
-    fn separator(&self) -> &MenuItem {
-        unimplemented!()
-    } // Hmm odd... "default separator item is blank space"
 
     // Owning menu
 
