@@ -5,6 +5,7 @@ use cocoa::base::{id, nil};
 use objc::{class, msg_send, sel, sel_impl};
 
 /// Helper to make constructing the menu bar easier
+#[derive(Debug)]
 pub struct MenuBar(Menu);
 
 impl MenuBar {

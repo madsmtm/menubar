@@ -1,12 +1,14 @@
 use super::menu::Menu;
 use super::util::to_nsstring;
 use cocoa::base::{id, nil};
+use cocoa::foundation::NSInteger;
 use objc::{class, msg_send, sel, sel_impl};
 
 struct Target; // Normal NSObject. Should return YES in worksWhenModal.
 struct ActionSelector; // objc::Sel - a method selector
 struct Image;
 
+#[derive(Debug, PartialEq)]
 pub enum MenuItemState {
     /// Checked
     On,
@@ -15,6 +17,7 @@ pub enum MenuItemState {
     Off,
 }
 
+#[derive(Debug)]
 pub struct MenuItem(id);
 
 impl MenuItem {
@@ -29,7 +32,7 @@ impl MenuItem {
 
     // Public only locally to allow for construction in Menubar
     pub(super) fn new_empty() -> Self {
-        let item = unsafe { msg_send![Self::alloc(), init] };
+        let item: id = unsafe { msg_send![Self::alloc(), init] };
         assert_ne!(item, nil);
         MenuItem(item)
     }
@@ -38,7 +41,7 @@ impl MenuItem {
     pub fn new(title: &str, key_equivalent: &str, _action: impl Fn() -> ()) -> Self {
         let title = to_nsstring(title);
         let key_equivalent = to_nsstring(key_equivalent);
-        let item = unsafe {
+        let item: id = unsafe {
             msg_send![Self::alloc(), initWithTitle:title action:nil keyEquivalent:key_equivalent]
         };
         assert_ne!(item, nil);
@@ -108,7 +111,7 @@ impl MenuItem {
 
     /// Get the menu item's state
     pub fn state(&self) -> MenuItemState {
-        let state: isize = unsafe { msg_send![self.0, state] };
+        let state: NSInteger = unsafe { msg_send![self.0, state] };
         match state {
             1 => MenuItemState::On,
             -1 => MenuItemState::Mixed,
@@ -129,7 +132,7 @@ impl MenuItem {
             MenuItemState::Mixed => -1,
             MenuItemState::Off => 0,
         };
-        unsafe { msg_send![self.0, setState: state as isize] }
+        unsafe { msg_send![self.0, setState: state as NSInteger] }
     }
 
     // Images
@@ -154,9 +157,12 @@ impl MenuItem {
     }
     pub fn set_submenu(&mut self, menu: Option<Menu>) {
         // TMP: owning Menu??
-        unsafe {
-            msg_send![self.0, setSubmenu: if let Some(menu) = menu { menu.as_raw() } else { nil }]
-        }
+        let submenu: id = if let Some(menu) = menu {
+            unsafe { menu.as_raw() }
+        } else {
+            nil
+        };
+        unsafe { msg_send![self.0, setSubmenu: submenu] }
     } // The submenu must not already have a parent!
     fn has_submenu(&self) -> bool {
         unimplemented!()

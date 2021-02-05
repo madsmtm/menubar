@@ -43,7 +43,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                     submenu.add(MenuItem::new("submenu item 2", "e", || unimplemented!()));
                     Some(submenu)
                 });
+                assert_eq!(item.state(), MenuItemState::Off);
                 item.set_state(MenuItemState::On);
+                assert_eq!(item.state(), MenuItemState::On);
+                item.set_state(MenuItemState::Mixed);
+                assert_eq!(item.state(), MenuItemState::Mixed);
+                item.set_state(MenuItemState::Off);
+                assert_eq!(item.state(), MenuItemState::Off);
                 item
             });
             menu.add(MenuItem::new("item 4", "f", || unimplemented!()));

@@ -1,6 +1,7 @@
 use super::menuitem::MenuItem;
 use super::util::to_nsstring;
 use cocoa::base::{id, nil};
+use cocoa::foundation::NSInteger;
 use objc::{class, msg_send, sel, sel_impl};
 
 struct MenuDelegate;
@@ -10,6 +11,7 @@ struct USize {
     width: f64,
 }
 
+#[derive(Debug)]
 pub struct Menu(id);
 
 impl Menu {
@@ -25,7 +27,7 @@ impl Menu {
     }
 
     pub fn new() -> Self {
-        let menu = unsafe { msg_send![Self::alloc(), init] };
+        let menu: id = unsafe { msg_send![Self::alloc(), init] };
         assert_ne!(menu, nil);
         Menu(menu)
     }
@@ -33,7 +35,7 @@ impl Menu {
     // Public only locally to allow for construction in Menubar
     pub(super) fn new_with_title(title: &str) -> Self {
         let title = to_nsstring(title);
-        let menu = unsafe { msg_send![Self::alloc(), initWithTitle: title] };
+        let menu: id = unsafe { msg_send![Self::alloc(), initWithTitle: title] };
         assert_ne!(menu, nil);
         Menu(menu)
     }
@@ -47,7 +49,7 @@ impl Menu {
         //     - We need to ensure this somehow, for now we'll just consume the item!
 
         // assert!(at < self.len())
-        unsafe { msg_send![self.0, insertItem: item.as_raw() atIndex: at] }
+        unsafe { msg_send![self.0, insertItem: item.as_raw() atIndex: at as NSInteger] }
     }
     pub fn add(&mut self, item: MenuItem) {
         // Same safety concerns as above
