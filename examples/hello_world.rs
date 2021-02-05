@@ -52,7 +52,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 assert_eq!(item.state(), MenuItemState::Off);
                 item
             });
-            menu.add(MenuItem::new("item 4", "f", || unimplemented!()));
+            let mut item = MenuItem::new("item x", "f", || unimplemented!());
+            assert_eq!(item.title(), "item x");
+            item.set_title("item 4");
+            assert_eq!(item.title(), "item 4");
+            menu.add(item);
         });
 
         menubar.add("menu 2", |menu| {

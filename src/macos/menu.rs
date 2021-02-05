@@ -1,5 +1,5 @@
 use super::menuitem::MenuItem;
-use super::util::to_nsstring;
+use super::util::{to_nsstring, from_nsstring};
 use cocoa::base::{id, nil};
 use cocoa::foundation::NSInteger;
 use objc::{class, msg_send, sel, sel_impl};
@@ -43,6 +43,18 @@ impl Menu {
         let menu: id = unsafe { msg_send![Self::alloc(), initWithTitle: title] };
         assert_ne!(menu, nil);
         Menu(menu)
+    }
+
+    // Title (only useful for MenuBar!)
+
+    pub(super) fn title(&self) -> &str {
+        let title: id = unsafe { msg_send![self.0, title] };
+        unsafe { from_nsstring(title) } // Lifetimes unsure!
+    }
+
+    pub(super) fn set_title(&mut self, title: &str) {
+        let title = to_nsstring(title);
+        unsafe { msg_send![self.0, setTitle: title] }
     }
 
     // Managing items
@@ -156,16 +168,6 @@ impl Menu {
     // Simulating mouse clicks
 
     // fn perform_action_for_item_at(&self, index: isize) {}
-
-    // Managing title
-
-    fn title(&self) -> &str {
-        unimplemented!()
-    }
-    fn set_title(&self, title: &str) {
-        // Lifetimes unsure
-        unimplemented!()
-    }
 
     // Managing menu bar
 

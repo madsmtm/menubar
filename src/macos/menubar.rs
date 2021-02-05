@@ -43,4 +43,8 @@ impl MenuBar {
         f(&mut menu);
         self.add_menu(menu);
     }
+
+    // How do we handle this???
+    // pub fn title(index) {}
+    // pub fn set_title(index, title) {}
 }

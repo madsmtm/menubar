@@ -1,5 +1,5 @@
 use super::menu::Menu;
-use super::util::to_nsstring;
+use super::util::{to_nsstring, from_nsstring};
 use cocoa::base::{id, nil};
 use cocoa::foundation::NSInteger;
 use objc::{class, msg_send, sel, sel_impl};
@@ -92,13 +92,16 @@ impl MenuItem {
 
     // Title
 
-    fn title(&self) -> &str {
-        unimplemented!()
+    pub fn title(&self) -> &str {
+        let title: id = unsafe { msg_send![self.0, title] };
+        unsafe { from_nsstring(title) } // Lifetimes unsure!
     }
-    fn set_title(&mut self, title: &str) {
-        unimplemented!()
-    } // Lifetimes unsure
-      // Property attributedTitle???
+
+    pub fn set_title(&mut self, title: &str) {
+        let title = to_nsstring(title);
+        unsafe { msg_send![self.0, setTitle: title] }
+    }
+    // Property attributedTitle???
 
     // Tag
 
