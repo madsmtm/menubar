@@ -31,5 +31,5 @@ fn main() {
         menu.add_submenu("Open Recent", open_recent_menu);
     });
     // main_menu.set_visible(false);
-    menu_bar.attach_to_application();
+    // unsafe { menu_bar.attach_to_application() };
 }

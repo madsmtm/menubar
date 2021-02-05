@@ -3,6 +3,12 @@
 
 use env_logger;
 #[cfg(target_os = "macos")]
+use menubar::macos::{
+    menu::Menu,
+    menubar::MenuBar,
+    menuitem::{MenuItem, MenuItemState},
+};
+#[cfg(target_os = "macos")]
 use objc::{class, msg_send, sel, sel_impl};
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::error::Error;
@@ -11,7 +17,9 @@ use winit::platform::macos::WindowBuilderExtMacOS;
 #[cfg(target_os = "windows")]
 use winit::platform::windows::WindowBuilderExtWindows;
 use winit::{
-    event::{DeviceEvent, Event, StartCause, WindowEvent},
+    event::{
+        DeviceEvent, ElementState, Event, KeyboardInput, StartCause, VirtualKeyCode, WindowEvent,
+    },
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
@@ -27,10 +35,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     #[cfg(target_os = "macos")]
     let menubar = {
-        use menubar::macos::menu::Menu;
-        use menubar::macos::menubar::MenuBar;
-        use menubar::macos::menuitem::{MenuItem, MenuItemState};
-
         let mut menubar = MenuBar::new(|menu| {
             menu.add(MenuItem::new("item 1", "a", || unimplemented!()));
             menu.add(MenuItem::new("item 2", "b", || unimplemented!()));
@@ -265,17 +269,49 @@ fn main() -> Result<(), Box<dyn Error>> {
                 dbg!("Init");
                 #[cfg(target_os = "macos")]
                 unsafe {
-                    use cocoa::appkit::{NSApp, NSApplication};
-                    use cocoa::base::id;
-
-                    dbg!(menubar.as_raw());
-                    let app = NSApp();
-                    let main_menu: id = msg_send![app, mainMenu];
-                    dbg!(main_menu);
-                    app.setMainMenu_(menubar.as_raw());
-                    let main_menu: id = msg_send![app, mainMenu];
-                    dbg!(main_menu);
+                    MenuBar::set_global_visible(true);
+                    menubar.attach_to_application();
+                }
+            }
+            Event::WindowEvent {
+                event:
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state,
+                                virtual_keycode: Some(VirtualKeyCode::Return),
+                                ..
+                            },
+                        ..
+                    },
+                ..
+            } => {
+                #[cfg(target_os = "macos")]
+                {
+                    use menubar::macos::menubar::MenuBar;
+                    if state == ElementState::Pressed {
+                        unsafe { MenuBar::set_global_visible(true) };
+                        MenuBar::global_visible();
+                    } else {
+                        unsafe { MenuBar::set_global_visible(false) };
+                        MenuBar::global_visible();
+                    }
                 };
+            }
+            Event::WindowEvent {
+                event:
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Pressed,
+                                virtual_keycode: Some(VirtualKeyCode::Escape),
+                                ..
+                            },
+                        ..
+                    },
+                ..
+            } => {
+                window.set_fullscreen(None);
             }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,

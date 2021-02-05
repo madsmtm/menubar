@@ -26,6 +26,11 @@ impl Menu {
         self.0
     }
 
+    pub unsafe fn from_raw(menu: id) -> Self {
+        // TMP
+        Self(menu)
+    }
+
     pub fn new() -> Self {
         let menu: id = unsafe { msg_send![Self::alloc(), init] };
         assert_ne!(menu, nil);
