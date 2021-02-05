@@ -59,10 +59,20 @@ fn main() -> Result<(), Box<dyn Error>> {
             menu.add(item);
         });
 
-        menubar.add("menu 2", |menu| {
-            menu.add(MenuItem::new("item 1", "g", || unimplemented!()));
-            menu.add(MenuItem::new("item 2", "h", || unimplemented!()));
-            menu.add(MenuItem::new("item 3", "i", || unimplemented!()));
+        menubar.add("menu hidden", |menu| {
+            let item = MenuItem::new("item 1", "g", || unimplemented!());
+            assert!(!item.hidden());
+            menu.add(item);
+            let mut item = MenuItem::new("item 2", "h", || unimplemented!());
+            assert!(!item.hidden());
+            item.set_hidden(true);
+            assert!(item.hidden());
+            item.set_hidden(false);
+            assert!(!item.hidden());
+            menu.add(item);
+            let mut item = MenuItem::new("item 3", "i", || unimplemented!());
+            item.set_hidden(true);
+            menu.add(item);
         });
 
         menubar.add("Duplicate key equvalent", |menu| {

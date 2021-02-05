@@ -34,8 +34,8 @@ impl InitializedApplication {
     }
 
     pub fn menubar_visible(&self) -> bool {
-        let res: BOOL = unsafe { msg_send![class!(NSMenu), menuBarVisible] };
-        res != NO
+        let visible: BOOL = unsafe { msg_send![class!(NSMenu), menuBarVisible] };
+        visible != NO
     }
 
     /// Hide or show the menubar for the entire application.

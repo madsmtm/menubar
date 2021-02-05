@@ -1,6 +1,7 @@
 use super::menu::Menu;
 use super::util::{to_nsstring, from_nsstring};
 use cocoa::base::{id, nil};
+use objc::runtime::{BOOL, NO, YES};
 use cocoa::foundation::NSInteger;
 use objc::{class, msg_send, sel, sel_impl};
 
@@ -64,16 +65,21 @@ impl MenuItem {
 
     // Managing Hidden Status
 
-    // Do not appear in a menu and do not participate in command key matching
-    fn hidden(&self) -> bool {
-        unimplemented!()
+    /// Whether the menu item is hidden or not.
+    ///
+    /// If hidden, it does not appear in a menu and does not participate in command key matching.
+    pub fn hidden(&self) -> bool {
+        let hidden: BOOL = unsafe { msg_send![self.0, isHidden] };
+        hidden != NO
     }
-    fn set_hidden(&mut self, state: bool) {
-        unimplemented!()
+
+    pub fn set_hidden(&mut self, hidden: bool) {
+        let hidden: BOOL = if hidden { YES } else { NO };
+        unsafe { msg_send![self.0, setHidden: hidden] }
     }
-    fn hidden_or_has_hidden_ancestor(&self) -> bool {
-        unimplemented!()
-    }
+    // fn hidden_or_has_hidden_ancestor(&self) -> bool {
+    //     unimplemented!()
+    // }
 
     // Target and action
 
