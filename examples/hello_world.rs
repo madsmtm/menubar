@@ -7,6 +7,7 @@ use menubar::macos::{
     menu::Menu,
     menubar::MenuBar,
     menuitem::{MenuItem, MenuItemState},
+    InitializedApplication,
 };
 #[cfg(target_os = "macos")]
 use objc::{class, msg_send, sel, sel_impl};
@@ -268,9 +269,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             Event::NewEvents(StartCause::Init) => {
                 dbg!("Init");
                 #[cfg(target_os = "macos")]
-                unsafe {
-                    MenuBar::set_global_visible(true);
-                    menubar.attach_to_application();
+                {
+                    let app = unsafe {InitializedApplication::new()};
+                    app.set_menubar_visible(true);
+                    app.set_menubar(&menubar);
+                    unsafe { assert_eq!(menubar.as_raw(), app.menubar().unwrap().as_raw()) };
                 }
             }
             Event::WindowEvent {
@@ -288,13 +291,14 @@ fn main() -> Result<(), Box<dyn Error>> {
             } => {
                 #[cfg(target_os = "macos")]
                 {
+                    let app = unsafe {InitializedApplication::new()};
                     use menubar::macos::menubar::MenuBar;
                     if state == ElementState::Pressed {
-                        unsafe { MenuBar::set_global_visible(true) };
-                        MenuBar::global_visible();
+                        app.set_menubar_visible(true);
+                        dbg!(app.menubar_visible());
                     } else {
-                        unsafe { MenuBar::set_global_visible(false) };
-                        MenuBar::global_visible();
+                        app.set_menubar_visible(false);
+                        dbg!(app.menubar_visible());
                     }
                 };
             }
