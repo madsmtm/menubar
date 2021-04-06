@@ -1,7 +1,5 @@
 use super::menuitem::{MenuElement, MenuItem};
-use super::util::{from_nsstring, to_nsstring};
-use cocoa::base::{id, nil};
-use cocoa::foundation::NSInteger;
+use super::util::{from_nsstring, nil, to_nsstring, Id, NSInteger};
 use objc::{class, msg_send, sel, sel_impl};
 
 struct MenuDelegate;
@@ -12,27 +10,27 @@ struct USize {
 }
 
 #[derive(Debug)]
-pub struct Menu(id);
+pub struct Menu(Id);
 
 impl Menu {
     // Creating menus
 
-    fn alloc() -> id {
+    fn alloc() -> Id {
         unsafe { msg_send![class!(NSMenu), alloc] }
     }
 
-    pub unsafe fn as_raw(&self) -> id {
+    pub unsafe fn as_raw(&self) -> Id {
         // TMP
         self.0
     }
 
-    pub unsafe fn from_raw(menu: id) -> Self {
+    pub unsafe fn from_raw(menu: Id) -> Self {
         // TMP
         Self(menu)
     }
 
     pub fn new() -> Self {
-        let menu: id = unsafe { msg_send![Self::alloc(), init] };
+        let menu: Id = unsafe { msg_send![Self::alloc(), init] };
         assert_ne!(menu, nil);
         Menu(menu)
     }
@@ -40,7 +38,7 @@ impl Menu {
     // Public only locally to allow for construction in Menubar
     pub(super) fn new_with_title(title: &str) -> Self {
         let title = to_nsstring(title);
-        let menu: id = unsafe { msg_send![Self::alloc(), initWithTitle: title] };
+        let menu: Id = unsafe { msg_send![Self::alloc(), initWithTitle: title] };
         assert_ne!(menu, nil);
         Menu(menu)
     }
@@ -48,7 +46,7 @@ impl Menu {
     // Title (only useful for MenuBar!)
 
     pub(super) fn title(&self) -> &str {
-        let title: id = unsafe { msg_send![self.0, title] };
+        let title: Id = unsafe { msg_send![self.0, title] };
         unsafe { from_nsstring(title) } // Lifetimes unsure!
     }
 

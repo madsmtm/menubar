@@ -1,8 +1,6 @@
 #![windows_subsystem = "windows"]
 #![allow(unused_imports)] // While testing
 
-#[cfg(target_os = "macos")]
-use cocoa::base::{id, nil};
 use env_logger;
 #[cfg(target_os = "macos")]
 use menubar::macos::{
@@ -12,6 +10,8 @@ use menubar::macos::{
 use objc::{class, msg_send, sel, sel_impl};
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::error::Error;
+#[cfg(target_os = "macos")]
+use std::ptr;
 #[cfg(target_os = "macos")]
 use winit::platform::macos::WindowBuilderExtMacOS;
 #[cfg(target_os = "windows")]
@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     #[cfg(target_os = "macos")]
     let (menubar, mut window_menu, mut services_menu, mut help_menu) = {
-        let mut services_menu = nil;
+        let mut services_menu = ptr::null_mut();
 
         let mut menubar = MenuBar::new(|menu| {
             menu.add(MenuElement::Item(MenuItem::new(
@@ -131,7 +131,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             menu.add(MenuElement::Item(item));
         });
 
-        let mut window_menu = nil;
+        let mut window_menu = ptr::null_mut();
 
         menubar.add("Window menu", |menu| {
             window_menu = unsafe { menu.as_raw() };
@@ -270,7 +270,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             assert_eq!(menu.len(), 0);
         });
 
-        let mut help_menu = nil;
+        let mut help_menu = ptr::null_mut();
 
         menubar.add("Help menu", |menu| {
             help_menu = unsafe { menu.as_raw() };

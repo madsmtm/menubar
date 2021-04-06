@@ -1,7 +1,5 @@
 use super::menu::Menu;
-use super::util::{from_nsstring, to_nsstring};
-use cocoa::base::{id, nil};
-use cocoa::foundation::NSInteger;
+use super::util::{from_nsstring, nil, to_nsstring, Id, NSInteger};
 use objc::runtime::{BOOL, NO, YES};
 use objc::{class, msg_send, sel, sel_impl};
 
@@ -25,14 +23,14 @@ pub enum MenuElement {
 }
 
 impl MenuElement {
-    pub unsafe fn as_raw(&self) -> id {
+    pub unsafe fn as_raw(&self) -> Id {
         // TMP
         match self {
             Self::Separator(separator) => separator.as_raw(),
             Self::Item(item) => item.as_raw(),
         }
     }
-    pub unsafe fn from_raw(element: id) -> Self {
+    pub unsafe fn from_raw(element: Id) -> Self {
         // TMP
         let is_separator: BOOL = msg_send![element, separatorItem];
         if is_separator != NO {
@@ -57,21 +55,21 @@ impl MenuElement {
 }
 
 #[derive(Debug)]
-pub struct MenuSeparator(id);
+pub struct MenuSeparator(Id);
 
 impl MenuSeparator {
     pub fn new() -> Self {
-        let separator: id = unsafe { msg_send![class!(NSMenuItem), separatorItem] };
+        let separator: Id = unsafe { msg_send![class!(NSMenuItem), separatorItem] };
         assert_ne!(separator, nil);
         Self(separator)
     }
 
-    pub unsafe fn as_raw(&self) -> id {
+    pub unsafe fn as_raw(&self) -> Id {
         // TMP
         self.0
     }
 
-    pub unsafe fn from_raw(separator: id) -> Self {
+    pub unsafe fn from_raw(separator: Id) -> Self {
         // TMP
         Self(separator)
     }
@@ -85,7 +83,7 @@ impl MenuSeparator {
 }
 
 #[derive(Debug)]
-pub struct MenuItem(id);
+pub struct MenuItem(Id);
 
 impl MenuItem {
     // Defaults:
@@ -93,13 +91,13 @@ impl MenuItem {
     //     On-state image: Check mark
     //     Mixed-state image: Dash
 
-    fn alloc() -> id {
+    fn alloc() -> Id {
         unsafe { msg_send![class!(NSMenuItem), alloc] }
     }
 
     // Public only locally to allow for construction in Menubar
     pub(super) fn new_empty() -> Self {
-        let item: id = unsafe { msg_send![Self::alloc(), init] };
+        let item: Id = unsafe { msg_send![Self::alloc(), init] };
         assert_ne!(item, nil);
         Self(item)
     }
@@ -108,19 +106,19 @@ impl MenuItem {
     pub fn new(title: &str, key_equivalent: &str, _action: impl Fn() -> ()) -> Self {
         let title = to_nsstring(title);
         let key_equivalent = to_nsstring(key_equivalent);
-        let item: id = unsafe {
+        let item: Id = unsafe {
             msg_send![Self::alloc(), initWithTitle:title action:nil keyEquivalent:key_equivalent]
         };
         assert_ne!(item, nil);
         Self(item)
     }
 
-    pub unsafe fn as_raw(&self) -> id {
+    pub unsafe fn as_raw(&self) -> Id {
         // TMP
         self.0
     }
 
-    pub unsafe fn from_raw(item: id) -> Self {
+    pub unsafe fn from_raw(item: Id) -> Self {
         // TMP
         Self(item)
     }
@@ -170,7 +168,7 @@ impl MenuItem {
     // Title
 
     pub fn title(&self) -> &str {
-        let title: id = unsafe { msg_send![self.0, title] };
+        let title: Id = unsafe { msg_send![self.0, title] };
         unsafe { from_nsstring(title) } // Lifetimes unsure!
     }
 
@@ -237,7 +235,7 @@ impl MenuItem {
     }
     pub fn set_submenu(&mut self, menu: Option<Menu>) {
         // TMP: owning Menu??
-        let submenu: id = if let Some(menu) = menu {
+        let submenu: Id = if let Some(menu) = menu {
             unsafe { menu.as_raw() }
         } else {
             nil

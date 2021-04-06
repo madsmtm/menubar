@@ -1,7 +1,6 @@
 use super::menu::Menu;
 use super::menuitem::{MenuElement, MenuItem};
-use super::util::to_nsstring;
-use cocoa::base::{id, nil};
+use super::util::{to_nsstring, Id};
 use objc::{class, msg_send, sel, sel_impl};
 
 /// Helper to make constructing the menu bar easier
@@ -9,12 +8,12 @@ use objc::{class, msg_send, sel, sel_impl};
 pub struct MenuBar(Menu);
 
 impl MenuBar {
-    pub unsafe fn as_raw(&self) -> id {
+    pub unsafe fn as_raw(&self) -> Id {
         // TMP
         self.0.as_raw()
     }
 
-    pub unsafe fn from_raw(menu: id) -> Self {
+    pub unsafe fn from_raw(menu: Id) -> Self {
         // TMP
         Self(Menu::from_raw(menu))
     }
