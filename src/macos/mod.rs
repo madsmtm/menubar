@@ -6,7 +6,7 @@ pub mod util; // TMP pub
 
 pub use global::InitializedApplication;
 pub use menu::Menu;
-pub use menubar::MenuBar;
+pub use self::menubar::MenuBar;
 pub use menuitem::{MenuElement, MenuItem, MenuItemState, MenuSeparator};
 
 // trait HasRawRepresentation {

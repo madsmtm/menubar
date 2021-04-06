@@ -1,6 +1,8 @@
 #![windows_subsystem = "windows"]
 #![allow(unused_imports)] // While testing
 
+#[cfg(target_os = "macos")]
+use cocoa::base::{id, nil};
 use env_logger;
 #[cfg(target_os = "macos")]
 use menubar::macos::{
@@ -32,13 +34,30 @@ fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
     #[cfg(target_os = "macos")]
-    let menubar = {
+    let (menubar, mut window_menu, mut services_menu, mut help_menu) = {
+        let mut services_menu = nil;
+
         let mut menubar = MenuBar::new(|menu| {
             menu.add(MenuElement::Item(MenuItem::new(
                 "item 1",
                 "a",
                 || unimplemented!(),
             )));
+            menu.add(MenuElement::Separator(MenuSeparator::new()));
+            menu.add({
+                let mut item = MenuItem::new("Services", "", || unimplemented!());
+                item.set_submenu({
+                    let mut submenu = Menu::new();
+                    submenu.add(MenuElement::Item(MenuItem::new(
+                        "will get removed or disappear?",
+                        "",
+                        || unimplemented!(),
+                    )));
+                    services_menu = unsafe { submenu.as_raw() };
+                    Some(submenu)
+                });
+                MenuElement::Item(item)
+            });
             menu.add(MenuElement::Separator(MenuSeparator::new()));
             // let mut item = unsafe {
             //     MenuItem::from_raw(msg_send![class!(NSMenuItem), separatorItem])
@@ -110,6 +129,17 @@ fn main() -> Result<(), Box<dyn Error>> {
             let mut item = MenuItem::new("item 3", "i", || unimplemented!());
             item.set_hidden(true);
             menu.add(MenuElement::Item(item));
+        });
+
+        let mut window_menu = nil;
+
+        menubar.add("Window menu", |menu| {
+            window_menu = unsafe { menu.as_raw() };
+            menu.add(MenuElement::Item(MenuItem::new(
+                "Will be above the window data",
+                "",
+                || unimplemented!(),
+            )));
         });
 
         menubar.add("Duplicate key equvalent", |menu| {
@@ -240,6 +270,17 @@ fn main() -> Result<(), Box<dyn Error>> {
             assert_eq!(menu.len(), 0);
         });
 
+        let mut help_menu = nil;
+
+        menubar.add("Help menu", |menu| {
+            help_menu = unsafe { menu.as_raw() };
+            menu.add(MenuElement::Item(MenuItem::new(
+                "Will be below the help search box",
+                "",
+                || unimplemented!(),
+            )));
+        });
+
         menubar.add("Insert tests", |menu| {
             menu.add(MenuElement::Item(MenuItem::new(
                 "item 4",
@@ -264,7 +305,14 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
         });
 
-        menubar
+        unsafe {
+            (
+                menubar,
+                Menu::from_raw(window_menu),
+                Menu::from_raw(services_menu),
+                Menu::from_raw(help_menu),
+            )
+        }
     };
 
     // #[cfg(target_os = "macos")]
@@ -377,7 +425,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("before event loop");
 
-    event_loop.run(move |event, _, control_flow| {
+    event_loop.run(move |event, event_loop, control_flow| {
         *control_flow = ControlFlow::Wait;
 
         match event {
@@ -386,7 +434,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 #[cfg(target_os = "macos")]
                 {
                     let app = unsafe { InitializedApplication::new() };
-                    app.set_menubar_visible(true);
+                    app.set_window_menu(&mut window_menu);
+                    app.set_services_menu(&mut services_menu);
+                    app.set_help_menu(Some(&mut help_menu));
+
                     app.set_menubar(&menubar);
                     unsafe { assert_eq!(menubar.as_raw(), app.menubar().unwrap().as_raw()) };
                 }
@@ -430,6 +481,26 @@ fn main() -> Result<(), Box<dyn Error>> {
                 ..
             } => {
                 window.set_fullscreen(None);
+            }
+            Event::WindowEvent {
+                event:
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Pressed,
+                                virtual_keycode: Some(VirtualKeyCode::X),
+                                ..
+                            },
+                        ..
+                    },
+                ..
+            } => {
+                let window = WindowBuilder::new()
+                    .with_title("test2")
+                    .with_inner_size(winit::dpi::LogicalSize::new(800, 640))
+                    .build(&event_loop)
+                    .unwrap();
+                std::mem::forget(window);
             }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
@@ -480,7 +551,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             }) => (),
             Event::RedrawEventsCleared => (),
             _ => {
-                dbg!(&event);
+                // dbg!(&event);
             }
         }
     });
