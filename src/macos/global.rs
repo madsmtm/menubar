@@ -16,6 +16,7 @@ impl InitializedApplication {
     /// SAFETY: Must not be called before `applicationDidFinishLaunching` has run!
     ///
     /// In `winit`, this is at or after [`winit::event::StartCause::Init`] has been emitted.
+    #[doc(alias = "sharedApplication")]
     pub unsafe fn new() -> Self {
         let ns_app = msg_send![class!(NSApplication), sharedApplication];
         InitializedApplication { ns_app }
@@ -33,7 +34,8 @@ impl InitializedApplication {
 
     /// Setting the menubar to `null` does not work properly, so we don't allow
     /// that functionality here!
-    #[doc(alias = "mainMenu")]
+    #[doc(alias = "setMainMenu")]
+    #[doc(alias = "setMainMenu:")]
     pub fn set_menubar(&self, menubar: &MenuBar) {
         // TODO: Should we consume menubar here?
         unsafe { msg_send![self.ns_app, setMainMenu: menubar.as_raw()] }
@@ -64,7 +66,8 @@ impl InitializedApplication {
     ///
     /// Additionally, you can have luck setting the window menu more than once,
     /// though this is not recommended.
-    #[doc(alias = "windowsMenu")]
+    #[doc(alias = "setWindowsMenu")]
+    #[doc(alias = "setWindowsMenu:")]
     pub fn set_window_menu(&self, menu: &mut Menu) {
         let _: () = unsafe { msg_send![self.ns_app, setWindowsMenu: menu.as_raw()] };
     }
@@ -90,7 +93,8 @@ impl InitializedApplication {
     ///
     /// Additionally, you can sometimes have luck setting the services menu
     /// more than once, but this is really flaky.
-    #[doc(alias = "servicesMenu")]
+    #[doc(alias = "setServicesMenu")]
+    #[doc(alias = "setServicesMenu:")]
     pub fn set_services_menu(&self, menu: &mut Menu) {
         // TODO: The menu should (must?) not contain any items!
         // TODO: Setting this and pressing the close button doesn't work in winit
@@ -116,7 +120,8 @@ impl InitializedApplication {
     /// If this is set to `None`, the system will place the search bar somewhere
     /// else, usually on an item named "Help" (unknown if localization applies).
     /// To prevent this, specify a menu that does not appear anywhere.
-    #[doc(alias = "helpMenu")]
+    #[doc(alias = "setHelpMenu")]
+    #[doc(alias = "setHelpMenu:")]
     pub fn set_help_menu(&self, menu: Option<&mut Menu>) {
         let help_menu: Id = match menu {
             Some(menu) => unsafe { menu.as_raw() },
@@ -127,6 +132,7 @@ impl InitializedApplication {
 
     // TODO: applicationDockMenu (the application delegate should implement this function)
 
+    #[doc(alias = "menuBarVisible")]
     pub fn menubar_visible(&self) -> bool {
         let visible: BOOL = unsafe { msg_send![class!(NSMenu), menuBarVisible] };
         visible != NO
@@ -136,12 +142,15 @@ impl InitializedApplication {
     /// This also hides or shows the yellow minimize button.
     ///
     /// Might silently fail to set the menubar visible if in fullscreen mode or similar.
+    #[doc(alias = "setMenuBarVisible")]
+    #[doc(alias = "setMenuBarVisible:")]
     pub fn set_menubar_visible(&self, visible: bool) {
         let visible: BOOL = if visible { YES } else { NO };
         unsafe { msg_send![class!(NSMenu), setMenuBarVisible: visible] }
     }
 
     // Only available on the global menu bar object
+    // #[doc(alias = "menuBarHeight")]
     // pub fn global_height(&self) -> f64 {
     //     let height: CGFloat = unsafe { msg_send![self.0.as_raw(), menuBarHeight] };
     //     height

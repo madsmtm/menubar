@@ -43,6 +43,22 @@ impl MenuBar {
         self.add_menu(menu);
     }
 
+    #[doc(alias = "menuBarVisible")]
+    fn global_visible() -> bool {
+        unimplemented!()
+    }
+
+    #[doc(alias = "setMenuBarVisible")]
+    #[doc(alias = "setMenuBarVisible:")]
+    fn set_global_visible(visible: bool) {
+        unimplemented!()
+    }
+
+    #[doc(alias = "menuBarHeight")]
+    fn global_height() -> f64 {
+        unimplemented!()
+    }
+
     // How do we handle this???
     // pub fn title(index) {}
     // pub fn set_title(index, title) {}
