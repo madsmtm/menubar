@@ -1,5 +1,6 @@
 use super::menuitem::MenuItem;
 use super::util::{from_nsstring, nil, to_nsstring, Id, NSInteger, NSUInteger};
+use core::fmt;
 use core::marker::PhantomData;
 use objc::{class, msg_send, sel, sel_impl};
 
@@ -10,7 +11,6 @@ struct USize {
     width: f64,
 }
 
-#[derive(Debug)]
 #[doc(alias = "NSMenu")]
 pub struct Menu(Id);
 
@@ -51,6 +51,7 @@ impl Menu {
 
     pub(super) fn title(&self) -> &str {
         let title: Id = unsafe { msg_send![self.0, title] };
+        assert_ne!(title, nil);
         unsafe { from_nsstring(title) } // Lifetimes unsure!
     }
 
@@ -360,6 +361,18 @@ impl Menu {
     //     NSCoding
     //     NSCopying
     //     NSUserInterfaceItemIdentification - May become important!
+}
+
+impl fmt::Debug for Menu {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Menu")
+            .field("id", &self.0)
+            .field("title", &self.title())
+            // TODO: parent?
+            // TODO: size and stuff
+            .field("items", &self.iter().collect::<Vec<_>>())
+            .finish()
+    }
 }
 
 struct Iter<'a> {

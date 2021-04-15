@@ -239,6 +239,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             menu.insert(MenuItem::new("item 5", "", || unimplemented!()), 4);
         });
 
+        println!("{:#?}", menubar);
+
         unsafe {
             (
                 menubar,

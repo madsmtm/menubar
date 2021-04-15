@@ -1,5 +1,6 @@
 use super::menu::Menu;
 use super::util::{from_nsstring, nil, to_nsstring, Id, NSInteger};
+use core::fmt;
 use objc::runtime::{BOOL, NO, YES};
 use objc::{class, msg_send, sel, sel_impl};
 
@@ -16,7 +17,6 @@ pub enum MenuItemState {
     Off,
 }
 
-#[derive(Debug)]
 #[doc(alias = "NSMenuItem")]
 pub struct MenuItem(Id);
 
@@ -126,6 +126,7 @@ impl MenuItem {
 
     pub fn title(&self) -> &str {
         let title: Id = unsafe { msg_send![self.0, title] };
+        assert_ne!(title, nil);
         unsafe { from_nsstring(title) } // Lifetimes unsure!
     }
 
@@ -213,8 +214,14 @@ impl MenuItem {
 
     // Submenus
 
-    fn submenu(&self) -> Option<&Menu> {
-        unimplemented!()
+    // Unsure about lifetime of the returned type
+    pub fn submenu(&self) -> Option<Menu> {
+        let submenu: Id = unsafe { msg_send![self.0, submenu] };
+        if submenu != nil {
+            Some(unsafe { Menu::from_raw(submenu) })
+        } else {
+            None
+        }
     }
 
     #[doc(alias = "setSubmenu")]
@@ -241,10 +248,10 @@ impl MenuItem {
         unimplemented!()
     }
 
-    #[doc(alias = "separatorItem")]
+    #[doc(alias = "isSeparatorItem")]
     fn separator(&self) -> bool {
         // TODO: Maybe call this is_separator?
-        let is_separator: BOOL = unsafe { msg_send![self.0, separatorItem] };
+        let is_separator: BOOL = unsafe { msg_send![self.0, isSeparatorItem] };
         is_separator != NO
     }
 
@@ -342,4 +349,18 @@ impl MenuItem {
     // Protocols: Same as Menu + "NSValidatedUserInterfaceItem"
     // This will have to be researched, is the way for the system to
     // automatically enable and disable items based on context
+}
+
+impl fmt::Debug for MenuItem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MenuItem")
+            .field("id", &self.0)
+            .field("separator", &self.separator())
+            .field("title", &self.title())
+            .field("hidden", &self.hidden())
+            .field("state", &self.state())
+            .field("submenu", &self.submenu())
+            // TODO: parent?
+            .finish()
+    }
 }
