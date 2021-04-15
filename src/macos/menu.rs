@@ -1,5 +1,6 @@
 use super::menuitem::MenuItem;
-use super::util::{from_nsstring, nil, to_nsstring, Id, NSInteger};
+use super::util::{from_nsstring, nil, to_nsstring, Id, NSInteger, NSUInteger};
+use core::marker::PhantomData;
 use objc::{class, msg_send, sel, sel_impl};
 
 struct MenuDelegate;
@@ -144,6 +145,17 @@ impl Menu {
     #[doc(alias = "itemArray")]
     fn get_all_items(&self) -> &[&MenuItem] {
         unimplemented!()
+    }
+
+    #[doc(alias = "itemArray")]
+    pub fn iter(&self) -> impl Iterator<Item = MenuItem> {
+        let array: Id = unsafe { msg_send![self.0, itemArray] };
+        let enumerator: Id = unsafe { msg_send![array, objectEnumerator] };
+        Iter {
+            array,
+            enumerator,
+            _p: PhantomData,
+        }
     }
 
     // Finding indices of elements
@@ -349,3 +361,30 @@ impl Menu {
     //     NSCopying
     //     NSUserInterfaceItemIdentification - May become important!
 }
+
+struct Iter<'a> {
+    array: Id,
+    enumerator: Id,
+    _p: PhantomData<&'a Menu>,
+}
+
+impl Iterator for Iter<'_> {
+    type Item = MenuItem;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item: Id = unsafe { msg_send![self.enumerator, nextObject] };
+
+        if item.is_null() {
+            None
+        } else {
+            Some(unsafe { MenuItem::from_raw(item) })
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let length: NSUInteger = unsafe { msg_send![self.array, count] };
+        (length as usize, Some(length as usize))
+    }
+}
+
+impl ExactSizeIterator for Iter<'_> {}
