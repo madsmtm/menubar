@@ -17,72 +17,6 @@ pub enum MenuItemState {
 }
 
 #[derive(Debug)]
-pub enum MenuElement {
-    Separator(MenuSeparator),
-    Item(MenuItem),
-}
-
-impl MenuElement {
-    pub unsafe fn as_raw(&self) -> Id {
-        // TMP
-        match self {
-            Self::Separator(separator) => separator.as_raw(),
-            Self::Item(item) => item.as_raw(),
-        }
-    }
-    pub unsafe fn from_raw(element: Id) -> Self {
-        // TMP
-        let is_separator: BOOL = msg_send![element, separatorItem];
-        if is_separator != NO {
-            Self::Separator(MenuSeparator::from_raw(element))
-        } else {
-            Self::Item(MenuItem::from_raw(element))
-        }
-    }
-
-    pub fn hidden(&self) -> bool {
-        match self {
-            Self::Separator(separator) => separator.hidden(),
-            Self::Item(item) => item.hidden(),
-        }
-    }
-    pub fn set_hidden(&mut self, hidden: bool) {
-        match self {
-            Self::Separator(separator) => separator.set_hidden(hidden),
-            Self::Item(item) => item.set_hidden(hidden),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct MenuSeparator(Id);
-
-impl MenuSeparator {
-    pub fn new() -> Self {
-        let separator: Id = unsafe { msg_send![class!(NSMenuItem), separatorItem] };
-        assert_ne!(separator, nil);
-        Self(separator)
-    }
-
-    pub unsafe fn as_raw(&self) -> Id {
-        // TMP
-        self.0
-    }
-
-    pub unsafe fn from_raw(separator: Id) -> Self {
-        // TMP
-        Self(separator)
-    }
-
-    pub fn hidden(&self) -> bool {
-        unimplemented!() // Same impl as MenuItem
-    }
-    pub fn set_hidden(&mut self, hidden: bool) {
-        unimplemented!() // Same impl as MenuItem
-    }
-}
-
-#[derive(Debug)]
 #[doc(alias = "NSMenuItem")]
 pub struct MenuItem(Id);
 
@@ -113,6 +47,13 @@ impl MenuItem {
         };
         assert_ne!(item, nil);
         Self(item)
+    }
+
+    #[doc(alias = "separatorItem")]
+    pub fn new_separator() -> Self {
+        let separator: Id = unsafe { msg_send![class!(NSMenuItem), separatorItem] };
+        assert_ne!(separator, nil);
+        Self(separator)
     }
 
     pub unsafe fn as_raw(&self) -> Id {
@@ -300,7 +241,12 @@ impl MenuItem {
         unimplemented!()
     }
 
-    // Something about separators
+    #[doc(alias = "separatorItem")]
+    fn separator(&self) -> bool {
+        // TODO: Maybe call this is_separator?
+        let is_separator: BOOL = unsafe { msg_send![self.0, separatorItem] };
+        is_separator != NO
+    }
 
     // Owning menu
 

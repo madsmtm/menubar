@@ -1,4 +1,4 @@
-use super::menuitem::{MenuElement, MenuItem};
+use super::menuitem::MenuItem;
 use super::util::{from_nsstring, nil, to_nsstring, Id, NSInteger};
 use objc::{class, msg_send, sel, sel_impl};
 
@@ -67,7 +67,7 @@ impl Menu {
     /// Panics if `index > menu.len()`.
     #[doc(alias = "insertItem")]
     #[doc(alias = "insertItem:atIndex:")]
-    pub fn insert(&mut self, item: MenuElement, index: usize) {
+    pub fn insert(&mut self, item: MenuItem, index: usize) {
         let length = self.len();
         if index > length {
             panic!(
@@ -86,7 +86,7 @@ impl Menu {
 
     #[doc(alias = "addItem")]
     #[doc(alias = "addItem:")]
-    pub fn add(&mut self, item: MenuElement) {
+    pub fn add(&mut self, item: MenuItem) {
         // Same safety concerns as above
         unsafe { msg_send![self.0, addItem: item.as_raw()] }
     }
@@ -96,7 +96,7 @@ impl Menu {
     // Can't use this yet, we need to find a way to let users have references to menu items safely!
     // #[doc(alias = "removeItem")]
     // #[doc(alias = "removeItem:")]
-    // fn remove(&mut self, item: &MenuElement) {
+    // fn remove(&mut self, item: &MenuItem) {
     //     unsafe { msg_send![self.0, removeItem: item.as_raw()] }
     // }
     // #[doc(alias = "removeItemAtIndex")]
@@ -128,7 +128,7 @@ impl Menu {
 
     #[doc(alias = "itemAtIndex")]
     #[doc(alias = "itemAtIndex:")]
-    unsafe fn get_at_index(&self, at: isize) -> &MenuElement {
+    unsafe fn get_at_index(&self, at: isize) -> &MenuItem {
         unimplemented!()
     }
 
@@ -142,7 +142,7 @@ impl Menu {
     }
 
     #[doc(alias = "itemArray")]
-    fn get_all_items(&self) -> &[&MenuElement] {
+    fn get_all_items(&self) -> &[&MenuItem] {
         unimplemented!()
     }
 
@@ -150,7 +150,7 @@ impl Menu {
 
     #[doc(alias = "indexOfItem")]
     #[doc(alias = "indexOfItem:")]
-    fn index_of(&self, item: &MenuElement) -> Option<isize> {
+    fn index_of(&self, item: &MenuItem) -> Option<isize> {
         unimplemented!()
     }
 

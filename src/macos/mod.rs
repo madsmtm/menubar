@@ -7,7 +7,7 @@ pub mod util; // TMP pub
 pub use self::menubar::MenuBar;
 pub use global::InitializedApplication;
 pub use menu::Menu;
-pub use menuitem::{MenuElement, MenuItem, MenuItemState, MenuSeparator};
+pub use menuitem::{MenuItem, MenuItemState};
 
 // trait HasRawRepresentation {
 //     unsafe fn as_raw(&self) -> id;
