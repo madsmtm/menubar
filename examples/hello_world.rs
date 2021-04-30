@@ -11,7 +11,7 @@ use std::error::Error;
 #[cfg(target_os = "macos")]
 use std::ptr;
 #[cfg(target_os = "macos")]
-use winit::platform::macos::WindowBuilderExtMacOS;
+use winit::platform::macos::EventLoopExtMacOS;
 #[cfg(target_os = "windows")]
 use winit::platform::windows::WindowBuilderExtWindows;
 use winit::{
@@ -341,13 +341,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         menu
     };
 
-    let event_loop = EventLoop::new();
+    let mut event_loop = EventLoop::new();
+
+    event_loop.set_activation_policy(winit::platform::macos::ActivationPolicy::Regular);
 
     let builder = WindowBuilder::new()
         .with_title("test")
         .with_inner_size(winit::dpi::LogicalSize::new(800, 640));
-    #[cfg(target_os = "macos")]
-    let builder = builder.with_activation_policy(winit::platform::macos::ActivationPolicy::Regular);
     #[cfg(target_os = "windows")]
     let builder = builder
         .with_menu(menu)
