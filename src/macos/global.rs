@@ -170,6 +170,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "not implemented"]
     fn test_services_menu() {
         let app = init_app();
         let mut menu1 = create_menu();

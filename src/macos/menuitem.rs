@@ -18,6 +18,7 @@ pub enum MenuItemState {
 }
 
 #[doc(alias = "NSMenuItem")]
+#[derive(PartialEq)]
 pub struct MenuItem(Id);
 
 impl MenuItem {
@@ -249,7 +250,7 @@ impl MenuItem {
     }
 
     #[doc(alias = "isSeparatorItem")]
-    fn separator(&self) -> bool {
+    pub fn separator(&self) -> bool {
         // TODO: Maybe call this is_separator?
         let is_separator: BOOL = unsafe { msg_send![self.0, isSeparatorItem] };
         is_separator != NO
@@ -362,5 +363,102 @@ impl fmt::Debug for MenuItem {
             .field("submenu", &self.submenu())
             // TODO: parent?
             .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_util::STRINGS;
+
+    fn get_items() -> [MenuItem; 3] {
+        [
+            MenuItem::new_separator(),
+            MenuItem::new_empty(),
+            MenuItem::new("", "", || unimplemented!()),
+        ]
+    }
+
+    #[test]
+    fn test_hidden() {
+        get_items().iter_mut().for_each(|item| {
+            assert!(!item.hidden());
+            item.set_hidden(true);
+            assert!(item.hidden());
+            item.set_hidden(false);
+            assert!(!item.hidden());
+        })
+    }
+
+    #[test]
+    fn test_title() {
+        get_items().iter_mut().for_each(|item| {
+            STRINGS.iter().for_each(|&title| {
+                item.set_title(title);
+                assert_eq!(item.title(), title);
+            })
+        })
+    }
+
+    #[test]
+    fn test_title_init() {
+        STRINGS.iter().for_each(|&title| {
+            let item = MenuItem::new(title, "", || unimplemented!());
+            assert_eq!(item.title(), title);
+        })
+    }
+
+    #[test]
+    fn test_title_default() {
+        let item = MenuItem::new_empty();
+        assert_eq!(item.title(), "NSMenuItem");
+        let item = MenuItem::new_separator();
+        assert_eq!(item.title(), "");
+    }
+
+    #[test]
+    fn test_separator() {
+        let item = MenuItem::new_separator();
+        assert!(item.separator());
+        let item = MenuItem::new_empty();
+        assert!(!item.separator());
+        let item = MenuItem::new("", "", || unimplemented!());
+        assert!(!item.separator());
+    }
+
+    #[test]
+    fn test_state() {
+        get_items().iter_mut().for_each(|item| {
+            assert_eq!(item.state(), MenuItemState::Off);
+            item.set_state(MenuItemState::On);
+            assert_eq!(item.state(), MenuItemState::On);
+            item.set_state(MenuItemState::Mixed);
+            assert_eq!(item.state(), MenuItemState::Mixed);
+            item.set_state(MenuItemState::Off);
+            assert_eq!(item.state(), MenuItemState::Off);
+        })
+    }
+
+    #[test]
+    fn test_submenu() {
+        get_items().iter_mut().for_each(|item| {
+            assert!(item.submenu().is_none());
+            let menu = Menu::new();
+            // TODO: Clean up lifetime mess
+            let id = unsafe { menu.as_raw() };
+            item.set_submenu(Some(menu));
+            let menu = unsafe { Menu::from_raw(id) };
+            assert_eq!(item.submenu(), Some(menu));
+            item.set_submenu(None);
+            assert!(item.submenu().is_none());
+        })
+    }
+
+    #[test]
+    fn test_raw() {
+        let item = MenuItem::new_empty();
+        let id = unsafe { item.as_raw() };
+        let item2 = unsafe { MenuItem::from_raw(id) };
+        assert_eq!(item, item2);
     }
 }

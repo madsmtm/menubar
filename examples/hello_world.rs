@@ -197,17 +197,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             menu.add(MenuItem::new("Item with the looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooongest name!", "", || unimplemented!()));
         });
 
-        menubar.add("A lot of items", |menu| {
-            for i in 1..=100 {
-                menu.add(MenuItem::new(
-                    &format!("item {}", i),
-                    "",
-                    || unimplemented!(),
-                ));
-            }
-            assert_eq!(menu.len(), 100);
-        });
-
         menubar.add("This menu text is truncated on smaller screens since there's too many long menus already!", |menu| {
             menu.add(MenuItem::new("item", "", || unimplemented!()));
         });
@@ -239,7 +228,20 @@ fn main() -> Result<(), Box<dyn Error>> {
             menu.insert(MenuItem::new("item 5", "", || unimplemented!()), 4);
         });
 
+        // Debug print before we add a bunch of items
         println!("{:#?}", menubar);
+
+        menubar.add("A lot of items", |menu| {
+            const COUNT: usize = 65535;
+            for i in 1..=COUNT {
+                menu.add(MenuItem::new(
+                    &format!("item {}", i),
+                    "",
+                    || unimplemented!(),
+                ));
+            }
+            assert_eq!(menu.len(), COUNT);
+        });
 
         unsafe {
             (

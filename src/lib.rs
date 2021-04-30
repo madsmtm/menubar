@@ -5,3 +5,6 @@
 
 #[cfg(target_os = "macos")]
 pub mod macos;
+
+#[cfg(test)]
+mod test_util;

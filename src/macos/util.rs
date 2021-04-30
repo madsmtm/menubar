@@ -43,3 +43,18 @@ pub unsafe fn from_nsstring<'a>(nsstring: Id) -> &'a str {
     let cstring = ffi::CStr::from_ptr(res);
     cstring.to_str().unwrap()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_util::STRINGS;
+
+    #[test]
+    fn test_nsstring() {
+        STRINGS.iter().for_each(|&s| {
+            let id = to_nsstring(s);
+            let s2 = unsafe { from_nsstring(id) };
+            assert_eq!(s, s2);
+        })
+    }
+}

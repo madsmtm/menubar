@@ -11,7 +11,9 @@ struct USize {
     width: f64,
 }
 
+/// The maximum number of items a menu can hold is 65534
 #[doc(alias = "NSMenu")]
+#[derive(PartialEq)]
 pub struct Menu(Id);
 
 impl Menu {
@@ -83,6 +85,7 @@ impl Menu {
         //     - We need to ensure this somehow, for now we'll just consume the item!
         //     - Should maybe return a reference to the menu, where the reference is now bound to self?
         // - 0 <= index <= self.len()
+        // TODO: Thread safety!
         unsafe { msg_send![self.0, insertItem: item.as_raw() atIndex: index as NSInteger] }
     }
 
@@ -401,3 +404,112 @@ impl Iterator for Iter<'_> {
 }
 
 impl ExactSizeIterator for Iter<'_> {}
+
+impl std::iter::FusedIterator for Iter<'_> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_util::STRINGS;
+
+    #[test]
+    fn test_title() {
+        let mut menu = Menu::new();
+        assert_eq!(menu.title(), "");
+        STRINGS.iter().for_each(|&title| {
+            menu.set_title(title);
+            assert_eq!(menu.title(), title);
+        })
+    }
+
+    #[test]
+    fn test_title_init() {
+        STRINGS.iter().for_each(|&title| {
+            let menu = Menu::new_with_title(title);
+            assert_eq!(menu.title(), title);
+        })
+    }
+
+    #[test]
+    fn test_length() {
+        let mut menu = Menu::new();
+        assert_eq!(menu.len(), 0);
+        menu.add(MenuItem::new_empty());
+        assert_eq!(menu.len(), 1);
+        menu.add(MenuItem::new_separator());
+        assert_eq!(menu.len(), 2);
+        menu.add(MenuItem::new("test", "", || unimplemented!()));
+        assert_eq!(menu.len(), 3);
+        menu.insert(MenuItem::new("test", "", || unimplemented!()), 2);
+        assert_eq!(menu.len(), 4);
+        menu.remove_all();
+        assert_eq!(menu.len(), 0);
+    }
+
+    #[test]
+    fn test_iter() {
+        let mut menu = Menu::new();
+        assert!(menu.iter().next().is_none());
+
+        // A few different iterations
+        menu.add(MenuItem::new_empty());
+        menu.add(MenuItem::new_separator());
+        menu.add(MenuItem::new_empty());
+        let mut iter = menu.iter();
+        assert_eq!(iter.size_hint(), (3, Some(3)));
+        assert!(!iter.next().unwrap().separator());
+        assert!(iter.next().unwrap().separator());
+        assert!(!iter.next().unwrap().separator());
+        assert!(iter.next().is_none());
+
+        // Modifying after creating the iterator (the iterator is unaffected)
+        let mut iter = menu.iter();
+
+        menu.add(MenuItem::new_empty());
+        assert_eq!(iter.size_hint(), (3, Some(3)));
+        assert!(!iter.next().unwrap().separator());
+
+        menu.add(MenuItem::new_separator());
+        assert_eq!(iter.size_hint(), (3, Some(3)));
+        assert!(iter.next().unwrap().separator());
+
+        menu.remove_all();
+        assert_eq!(iter.size_hint(), (3, Some(3)));
+        assert!(!iter.next().unwrap().separator());
+
+        menu.add(MenuItem::new_separator());
+        assert_eq!(iter.size_hint(), (3, Some(3)));
+        assert!(iter.next().is_none());
+
+        // Test fused-ness
+        assert!(iter.next().is_none());
+        assert!(iter.next().is_none());
+        assert!(iter.next().is_none());
+        assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn test_max_count() {
+        let mut menu = Menu::new();
+        const COUNT: usize = 65534;
+        for i in 1..=COUNT {
+            menu.add(MenuItem::new(
+                &format!("item {}", i),
+                "",
+                || unimplemented!(),
+            ));
+        }
+        assert_eq!(menu.len(), COUNT);
+
+        // The menu, if we could render it at this point, should render fine
+
+        menu.add(MenuItem::new(
+            &format!("item {}", COUNT + 1),
+            "",
+            || unimplemented!(),
+        ));
+
+        // The menu item should fail rendering, and we should get an error similar to the following logged:
+        // 2021-01-01 00:00:00.000 my_program[12345:678901] InsertMenuItemTextWithCFString(_principalMenuRef, (useAccessibilityTitleDescriptionTrick ? CFSTR("") : (CFStringRef)title), carbonIndex - 1, attributes, [self _menuItemCommandID]) returned error -108 on line 2638 in -[NSCarbonMenuImpl _carbonMenuInsertItem:atCarbonIndex:]
+    }
+}
