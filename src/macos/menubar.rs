@@ -1,7 +1,7 @@
 use super::menu::Menu;
 use super::menuitem::MenuItem;
 use super::util::{to_nsstring, Id};
-use objc::{class, msg_send, sel, sel_impl};
+use objc::{class, msg_send, sel};
 
 /// Helper to make constructing the menu bar easier
 #[derive(Debug)]

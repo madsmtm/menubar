@@ -5,7 +5,7 @@ use env_logger;
 #[cfg(target_os = "macos")]
 use menubar::macos::{InitializedApplication, Menu, MenuBar, MenuItem, MenuItemState};
 #[cfg(target_os = "macos")]
-use objc::{class, msg_send, sel, sel_impl};
+use objc::{class, msg_send, sel};
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::error::Error;
 #[cfg(target_os = "macos")]

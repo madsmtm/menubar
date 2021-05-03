@@ -1,6 +1,6 @@
 use core::ptr;
 use objc::runtime::Object;
-use objc::{class, msg_send, sel, sel_impl};
+use objc::{class, msg_send, sel};
 use std::ffi;
 use std::os::raw;
 

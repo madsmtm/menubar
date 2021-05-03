@@ -2,7 +2,7 @@ use super::menuitem::MenuItem;
 use super::util::{from_nsstring, nil, to_nsstring, Id, NSInteger, NSUInteger};
 use core::fmt;
 use core::marker::PhantomData;
-use objc::{class, msg_send, sel, sel_impl};
+use objc::{class, msg_send, sel};
 
 struct MenuDelegate;
 

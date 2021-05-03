@@ -2,7 +2,7 @@ use super::menu::Menu;
 use super::util::{from_nsstring, nil, to_nsstring, Id, NSInteger};
 use core::{ffi, fmt, ptr};
 use objc::runtime::{BOOL, NO, YES};
-use objc::{class, msg_send, sel, sel_impl};
+use objc::{class, msg_send, sel};
 
 struct Target; // Normal NSObject. Should return YES in worksWhenModal.
 struct ActionSelector; // objc::Sel - a method selector

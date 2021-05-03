@@ -3,7 +3,7 @@ use super::menubar::MenuBar;
 use super::util::{nil, to_nsstring, Id};
 use core::marker::PhantomData;
 use objc::runtime::{Class, BOOL, NO, YES};
-use objc::{class, msg_send, sel, sel_impl};
+use objc::{class, msg_send, sel};
 
 /// Helper to make various functions on the global application safe
 #[doc(alias = "NSApp")]
