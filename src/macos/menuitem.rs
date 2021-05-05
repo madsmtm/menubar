@@ -1,6 +1,6 @@
 use super::menu::Menu;
 use super::util::{from_nsstring, nil, to_nsstring, Id, NSInteger};
-use core::fmt;
+use core::{ffi, fmt, ptr};
 use objc::runtime::{BOOL, NO, YES};
 use objc::{class, msg_send, sel, sel_impl};
 
@@ -40,11 +40,15 @@ impl MenuItem {
 
     #[doc(alias = "initWithTitle")]
     #[doc(alias = "initWithTitle:action:keyEquivalent:")]
-    pub fn new(title: &str, key_equivalent: &str, _action: impl Fn() -> ()) -> Self {
+    pub fn new(
+        title: &str,
+        key_equivalent: &str,
+        action: Option<ptr::NonNull<ffi::c_void>>,
+    ) -> Self {
         let title = to_nsstring(title);
         let key_equivalent = to_nsstring(key_equivalent);
         let item: Id = unsafe {
-            msg_send![Self::alloc(), initWithTitle:title action:nil keyEquivalent:key_equivalent]
+            msg_send![Self::alloc(), initWithTitle:title action:action keyEquivalent:key_equivalent]
         };
         assert_ne!(item, nil);
         Self(item)
@@ -375,7 +379,7 @@ mod tests {
         [
             MenuItem::new_separator(),
             MenuItem::new_empty(),
-            MenuItem::new("", "", || unimplemented!()),
+            MenuItem::new("", "", None),
         ]
     }
 
@@ -403,7 +407,7 @@ mod tests {
     #[test]
     fn test_title_init() {
         STRINGS.iter().for_each(|&title| {
-            let item = MenuItem::new(title, "", || unimplemented!());
+            let item = MenuItem::new(title, "", None);
             assert_eq!(item.title(), title);
         })
     }
@@ -422,7 +426,7 @@ mod tests {
         assert!(item.separator());
         let item = MenuItem::new_empty();
         assert!(!item.separator());
-        let item = MenuItem::new("", "", || unimplemented!());
+        let item = MenuItem::new("", "", None);
         assert!(!item.separator());
     }
 

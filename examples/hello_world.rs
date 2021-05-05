@@ -36,17 +36,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut services_menu = ptr::null_mut();
 
         let mut menubar = MenuBar::new(|menu| {
-            menu.add(MenuItem::new("item 1", "a", || unimplemented!()));
+            menu.add(MenuItem::new("item 1", "a", None));
             menu.add(MenuItem::new_separator());
             menu.add({
-                let mut item = MenuItem::new("Services", "", || unimplemented!());
+                let mut item = MenuItem::new("Services", "", None);
                 item.set_submenu({
                     let mut submenu = Menu::new();
-                    submenu.add(MenuItem::new(
-                        "will get removed or disappear?",
-                        "",
-                        || unimplemented!(),
-                    ));
+                    submenu.add(MenuItem::new("will get removed or disappear?", "", None));
                     services_menu = unsafe { submenu.as_raw() };
                     Some(submenu)
                 });
@@ -67,22 +63,22 @@ fn main() -> Result<(), Box<dyn Error>> {
             // item.set_hidden(true);
             // item.set_submenu({
             //     let mut submenu = Menu::new();
-            //     submenu.add(MenuItem::new("submenu item", "d", || unimplemented!()));
+            //     submenu.add(MenuItem::new("submenu item", "d", None));
             //     Some(submenu)
             // });
             // menu.add(item);
-            // let item = MenuItem::new("item 2", "b", || unimplemented!());
+            // let item = MenuItem::new("item 2", "b", None);
             // unsafe {
             //     let _: () = msg_send![item.as_raw(), setEnabled: 1];
             // }
             // menu.add(item);
             menu.add({
                 // Unsure how key equivalents affect submenuitems???
-                let mut item = MenuItem::new("item w. submenu", "c", || unimplemented!());
+                let mut item = MenuItem::new("item w. submenu", "c", None);
                 item.set_submenu({
                     let mut submenu = Menu::new();
-                    submenu.add(MenuItem::new("submenu item 1 🤖", "d", || unimplemented!()));
-                    submenu.add(MenuItem::new("submenu item 2", "e", || unimplemented!()));
+                    submenu.add(MenuItem::new("submenu item 1 🤖", "d", None));
+                    submenu.add(MenuItem::new("submenu item 2", "e", None));
                     Some(submenu)
                 });
                 assert_eq!(item.state(), MenuItemState::Off);
@@ -94,7 +90,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 assert_eq!(item.state(), MenuItemState::Off);
                 item
             });
-            let mut item = MenuItem::new("item x", "f", || unimplemented!());
+            let mut item = MenuItem::new("item x", "f", None);
             assert_eq!(item.title(), "item x");
             item.set_title("item 4");
             assert_eq!(item.title(), "item 4");
@@ -102,17 +98,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         });
 
         menubar.add("menu hidden", |menu| {
-            let item = MenuItem::new("item 1", "g", || unimplemented!());
+            let item = MenuItem::new("item 1", "g", None);
             assert!(!item.hidden());
             menu.add(item);
-            let mut item = MenuItem::new("item 2", "h", || unimplemented!());
+            let mut item = MenuItem::new("item 2", "h", None);
             assert!(!item.hidden());
             item.set_hidden(true);
             assert!(item.hidden());
             item.set_hidden(false);
             assert!(!item.hidden());
             menu.add(item);
-            let mut item = MenuItem::new("item 3", "i", || unimplemented!());
+            let mut item = MenuItem::new("item 3", "i", None);
             item.set_hidden(true);
             menu.add(item);
         });
@@ -121,52 +117,40 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         menubar.add("Window menu", |menu| {
             window_menu = unsafe { menu.as_raw() };
-            menu.add(MenuItem::new(
-                "Will be above the window data",
-                "",
-                || unimplemented!(),
-            ));
+            menu.add(MenuItem::new("Will be above the window data", "", None));
         });
 
         menubar.add("Duplicate key equvalent", |menu| {
-            menu.add(MenuItem::new("item 1", "j", || unimplemented!()));
-            menu.add(MenuItem::new("item 2", "j", || unimplemented!()));
+            menu.add(MenuItem::new("item 1", "j", None));
+            menu.add(MenuItem::new("item 2", "j", None));
         });
 
         menubar.add("Submenus gallore", |menu| {
             menu.add({
-                let mut item = MenuItem::new("Item 1", "", || unimplemented!());
+                let mut item = MenuItem::new("Item 1", "", None);
                 item.set_submenu({
                     let mut submenu = Menu::new();
-                    submenu.add(MenuItem::new("Item 1 : 1", "", || unimplemented!()));
-                    submenu.add(MenuItem::new("Item 1 : 2", "", || unimplemented!()));
+                    submenu.add(MenuItem::new("Item 1 : 1", "", None));
+                    submenu.add(MenuItem::new("Item 1 : 2", "", None));
                     submenu.add({
-                        let mut submenuitem = MenuItem::new("Item 1 : 3", "", || unimplemented!());
+                        let mut submenuitem = MenuItem::new("Item 1 : 3", "", None);
                         submenuitem.set_submenu({
                             let mut submenu2 = Menu::new();
-                            submenu2.add(MenuItem::new("Item 1 : 3 : 1", "", || unimplemented!()));
+                            submenu2.add(MenuItem::new("Item 1 : 3 : 1", "", None));
                             submenu2.add({
-                                let mut submenuitem2 =
-                                    MenuItem::new("Item 1 : 3 : 2", "", || unimplemented!());
+                                let mut submenuitem2 = MenuItem::new("Item 1 : 3 : 2", "", None);
                                 submenuitem2.set_submenu({
                                     let mut submenu3 = Menu::new();
-                                    let mut submenuitem3 = MenuItem::new(
-                                        "Item 1 : 3 : 2 : 1",
-                                        "",
-                                        || unimplemented!(),
-                                    );
+                                    let mut submenuitem3 =
+                                        MenuItem::new("Item 1 : 3 : 2 : 1", "", None);
                                     submenuitem3.set_state(MenuItemState::On);
                                     submenu3.add(submenuitem3);
-                                    submenu3.add(MenuItem::new(
-                                        "Item 1 : 3 : 2 : 2",
-                                        "k",
-                                        || unimplemented!(),
-                                    ));
+                                    submenu3.add(MenuItem::new("Item 1 : 3 : 2 : 2", "k", None));
                                     Some(submenu3)
                                 });
                                 submenuitem2
                             });
-                            submenu2.add(MenuItem::new("Item 1 : 3 : 3", "", || unimplemented!()));
+                            submenu2.add(MenuItem::new("Item 1 : 3 : 3", "", None));
                             Some(submenu2)
                         });
                         submenuitem.set_state(MenuItemState::Mixed);
@@ -178,11 +162,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 item
             });
             menu.add({
-                let mut item = MenuItem::new("Item 2", "", || unimplemented!());
+                let mut item = MenuItem::new("Item 2", "", None);
                 item.set_submenu({
                     let mut submenu = Menu::new();
-                    submenu.add(MenuItem::new("Item 2 : 1", "", || unimplemented!()));
-                    submenu.add(MenuItem::new("Item 2 : 2", "", || unimplemented!()));
+                    submenu.add(MenuItem::new("Item 2 : 1", "", None));
+                    submenu.add(MenuItem::new("Item 2 : 2", "", None));
                     Some(submenu)
                 });
                 item
@@ -192,18 +176,18 @@ fn main() -> Result<(), Box<dyn Error>> {
         menubar.add("Empty menu", |_| {});
 
         menubar.add("Menu with a really loooooooooooong name!", |menu| {
-            menu.add(MenuItem::new("Item with a really loooooooooooong name!", "", || unimplemented!()));
-            menu.add(MenuItem::new("Item with an even looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonger name!", "", || unimplemented!()));
-            menu.add(MenuItem::new("Item with the looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooongest name!", "", || unimplemented!()));
+            menu.add(MenuItem::new("Item with a really loooooooooooong name!", "", None));
+            menu.add(MenuItem::new("Item with an even looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonger name!", "", None));
+            menu.add(MenuItem::new("Item with the looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooongest name!", "", None));
         });
 
         menubar.add("This menu text is truncated on smaller screens since there's too many long menus already!", |menu| {
-            menu.add(MenuItem::new("item", "", || unimplemented!()));
+            menu.add(MenuItem::new("item", "", None));
         });
 
         menubar.add("Length tests", |menu| {
             assert_eq!(menu.len(), 0);
-            menu.add(MenuItem::new("item", "", || unimplemented!()));
+            menu.add(MenuItem::new("item", "", None));
             assert_eq!(menu.len(), 1);
             menu.remove_all();
             assert_eq!(menu.len(), 0);
@@ -213,19 +197,15 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         menubar.add("Help menu", |menu| {
             help_menu = unsafe { menu.as_raw() };
-            menu.add(MenuItem::new(
-                "Will be below the help search box",
-                "",
-                || unimplemented!(),
-            ));
+            menu.add(MenuItem::new("Will be below the help search box", "", None));
         });
 
         menubar.add("Insert tests", |menu| {
-            menu.add(MenuItem::new("item 4", "", || unimplemented!()));
-            menu.insert(MenuItem::new("item 3", "", || unimplemented!()), 0);
-            menu.insert(MenuItem::new("item 1", "", || unimplemented!()), 0);
-            menu.insert(MenuItem::new("item 2", "", || unimplemented!()), 1);
-            menu.insert(MenuItem::new("item 5", "", || unimplemented!()), 4);
+            menu.add(MenuItem::new("item 4", "", None));
+            menu.insert(MenuItem::new("item 3", "", None), 0);
+            menu.insert(MenuItem::new("item 1", "", None), 0);
+            menu.insert(MenuItem::new("item 2", "", None), 1);
+            menu.insert(MenuItem::new("item 5", "", None), 4);
         });
 
         // Debug print before we add a bunch of items
@@ -234,11 +214,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         menubar.add("A lot of items", |menu| {
             const COUNT: usize = 65535;
             for i in 1..=COUNT {
-                menu.add(MenuItem::new(
-                    &format!("item {}", i),
-                    "",
-                    || unimplemented!(),
-                ));
+                menu.add(MenuItem::new(&format!("item {}", i), "", None));
             }
             assert_eq!(menu.len(), COUNT);
         });

@@ -438,9 +438,9 @@ mod tests {
         assert_eq!(menu.len(), 1);
         menu.add(MenuItem::new_separator());
         assert_eq!(menu.len(), 2);
-        menu.add(MenuItem::new("test", "", || unimplemented!()));
+        menu.add(MenuItem::new("test", "", None));
         assert_eq!(menu.len(), 3);
-        menu.insert(MenuItem::new("test", "", || unimplemented!()), 2);
+        menu.insert(MenuItem::new("test", "", None), 2);
         assert_eq!(menu.len(), 4);
         menu.remove_all();
         assert_eq!(menu.len(), 0);
@@ -493,21 +493,13 @@ mod tests {
         let mut menu = Menu::new();
         const COUNT: usize = 65534;
         for i in 1..=COUNT {
-            menu.add(MenuItem::new(
-                &format!("item {}", i),
-                "",
-                || unimplemented!(),
-            ));
+            menu.add(MenuItem::new(&format!("item {}", i), "", None));
         }
         assert_eq!(menu.len(), COUNT);
 
         // The menu, if we could render it at this point, should render fine
 
-        menu.add(MenuItem::new(
-            &format!("item {}", COUNT + 1),
-            "",
-            || unimplemented!(),
-        ));
+        menu.add(MenuItem::new(&format!("item {}", COUNT + 1), "", None));
 
         // The menu item should fail rendering, and we should get an error similar to the following logged:
         // 2021-01-01 00:00:00.000 my_program[12345:678901] InsertMenuItemTextWithCFString(_principalMenuRef, (useAccessibilityTitleDescriptionTrick ? CFSTR("") : (CFStringRef)title), carbonIndex - 1, attributes, [self _menuItemCommandID]) returned error -108 on line 2638 in -[NSCarbonMenuImpl _carbonMenuInsertItem:atCarbonIndex:]

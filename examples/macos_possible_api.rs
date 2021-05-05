@@ -7,26 +7,22 @@ fn main() {
 
     let menu_bar = MenuBar::new(|menu| {});
     menu_bar.add("File", |menu| {
-        menu.add(MenuItem::new("New File", "CMD+N", || unimplemented!()));
-        menu.add(MenuItem::new("Open...", "CMD+O", || unimplemented!()));
+        menu.add(MenuItem::new("New File", "CMD+N", None));
+        menu.add(MenuItem::new("Open...", "CMD+O", None));
         let open_recent_menu = Menu::new(); // Has dynamic content
         open_recent_menu.on_open(|menu| {
             menu.remove_all();
-            menu.add_item(MenuItem::new(
-                "Reopen Closed File",
-                "SHIFT+CMD+T",
-                || unimplemented!(),
-            ));
+            menu.add_item(MenuItem::new("Reopen Closed File", "SHIFT+CMD+T", None));
             menu.add_separator();
             recent_projects.iter().for_each(|p| {
-                menu.add_item(MenuItem::new(p, "", || unimplemented!()));
+                menu.add_item(MenuItem::new(p, "", None));
             });
             menu.add_separator();
             recent_files.iter().for_each(|p| {
-                menu.add_item(MenuItem::new(p, "", || unimplemented!()));
+                menu.add_item(MenuItem::new(p, "", None));
             });
             menu.add_separator();
-            menu.add_item(MenuItem::new("Clear items", "", || unimplemented!()));
+            menu.add_item(MenuItem::new("Clear items", "", None));
         });
         menu.add_submenu("Open Recent", open_recent_menu);
     });
