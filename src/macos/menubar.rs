@@ -1,21 +1,15 @@
 use super::menu::Menu;
 use super::menuitem::MenuItem;
-use super::util::{to_nsstring, Id};
+use objc::rc::{Owned, Retained};
 use objc::{class, msg_send, sel};
 
 /// Helper to make constructing the menu bar easier
 #[derive(Debug)]
-pub struct MenuBar(Menu);
+pub struct MenuBar(Owned<Menu>);
 
 impl MenuBar {
-    pub unsafe fn as_raw(&self) -> Id {
-        // TMP
-        self.0.as_raw()
-    }
-
-    pub unsafe fn from_raw(menu: Id) -> Self {
-        // TMP
-        Self(Menu::from_raw(menu))
+    pub fn into_raw(self) -> Owned<Menu> {
+        self.0
     }
 
     pub fn new(f: impl FnOnce(&mut Menu) -> ()) -> Self {
@@ -30,17 +24,17 @@ impl MenuBar {
         menubar
     }
 
-    fn add_menu(&mut self, menu: Menu) {
+    fn add_menu<'a>(&'a mut self, menu: Owned<Menu>) -> &'a Menu {
         // All parameters on menu items irrelevant in the menu bar
-        let mut item = MenuItem::new_empty();
-        item.set_submenu(Some(menu));
-        self.0.add(item);
+        let item = MenuItem::new_empty();
+        let item = self.0.add(item);
+        item.set_submenu(Some(menu)).unwrap()
     }
 
-    pub fn add(&mut self, title: &str, f: impl FnOnce(&mut Menu) -> ()) {
+    pub fn add<'a>(&'a mut self, title: &str, f: impl FnOnce(&mut Menu) -> ()) -> &'a Menu {
         let mut menu = Menu::new_with_title(title);
         f(&mut menu);
-        self.add_menu(menu);
+        self.add_menu(menu)
     }
 
     #[doc(alias = "menuBarVisible")]

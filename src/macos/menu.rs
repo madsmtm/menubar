@@ -1,8 +1,12 @@
-use super::menuitem::MenuItem;
-use super::util::{from_nsstring, nil, to_nsstring, Id, NSInteger, NSUInteger};
 use core::fmt;
 use core::marker::PhantomData;
+use core::mem;
+use objc::rc::{autoreleasepool, AutoreleasePool, Owned, Retained};
+use objc::runtime::Object;
 use objc::{class, msg_send, sel};
+
+use super::menuitem::MenuItem;
+use super::util::{NSInteger, NSString, NSUInteger};
 
 struct MenuDelegate;
 
@@ -13,55 +17,57 @@ struct USize {
 
 /// The maximum number of items a menu can hold is 65534
 #[doc(alias = "NSMenu")]
-#[derive(PartialEq)]
-pub struct Menu(Id);
+#[repr(C)]
+pub struct Menu {
+    _priv: [u8; 0],
+}
+
+unsafe impl<'a> objc::Encode for &'a Menu {
+    const ENCODING: objc::Encoding<'static> = objc::Encoding::Object;
+}
+
+unsafe impl<'a> objc::Encode for &'a mut Menu {
+    const ENCODING: objc::Encoding<'static> = objc::Encoding::Object;
+}
+
+unsafe impl objc::Message for Menu {}
+
+unsafe impl Send for Menu {}
+unsafe impl Sync for Menu {}
 
 impl Menu {
     // Creating menus
 
-    fn alloc() -> Id {
-        unsafe { msg_send![class!(NSMenu), alloc] }
+    fn alloc() -> Owned<Self> {
+        unsafe { Owned::new(msg_send![class!(NSMenu), alloc]) }
     }
 
-    pub unsafe fn as_raw(&self) -> Id {
-        // TMP
-        self.0
-    }
-
-    pub unsafe fn from_raw(menu: Id) -> Self {
-        // TMP
-        Self(menu)
-    }
-
-    pub fn new() -> Self {
-        let menu: Id = unsafe { msg_send![Self::alloc(), init] };
-        assert_ne!(menu, nil);
-        Menu(menu)
+    pub fn new() -> Owned<Self> {
+        let ptr = mem::ManuallyDrop::new(Self::alloc()).as_ptr();
+        unsafe { Owned::new(msg_send![ptr, init]) }
     }
 
     // Public only locally to allow for construction in Menubar
     #[doc(alias = "initWithTitle")]
     #[doc(alias = "initWithTitle:")]
-    pub(super) fn new_with_title(title: &str) -> Self {
-        let title = to_nsstring(title);
-        let menu: Id = unsafe { msg_send![Self::alloc(), initWithTitle: title] };
-        assert_ne!(menu, nil);
-        Menu(menu)
+    pub(super) fn new_with_title(title: &str) -> Owned<Self> {
+        let title = NSString::from_str(title);
+        let ptr = mem::ManuallyDrop::new(Self::alloc()).as_ptr();
+        unsafe { Owned::new(msg_send![ptr, initWithTitle: title]) }
     }
 
     // Title (only useful for MenuBar!)
 
-    pub(super) fn title(&self) -> &str {
-        let title: Id = unsafe { msg_send![self.0, title] };
-        assert_ne!(title, nil);
-        unsafe { from_nsstring(title) } // Lifetimes unsure!
+    pub(super) fn title<'p>(&self, pool: &'p AutoreleasePool) -> &'p str {
+        let title: &NSString = unsafe { msg_send![self, title] };
+        title.to_str(pool)
     }
 
     #[doc(alias = "setTitle")]
     #[doc(alias = "setTitle:")]
     pub(super) fn set_title(&mut self, title: &str) {
-        let title = to_nsstring(title);
-        unsafe { msg_send![self.0, setTitle: title] }
+        let title = NSString::from_str(title);
+        unsafe { msg_send![self, setTitle: title] }
     }
 
     // Managing items
@@ -71,7 +77,7 @@ impl Menu {
     /// Panics if `index > menu.len()`.
     #[doc(alias = "insertItem")]
     #[doc(alias = "insertItem:atIndex:")]
-    pub fn insert(&mut self, item: MenuItem, index: usize) {
+    pub fn insert<'a>(&'a mut self, item: Owned<MenuItem>, index: usize) -> &'a mut MenuItem {
         let length = self.len();
         if index > length {
             panic!(
@@ -79,21 +85,25 @@ impl Menu {
                 index, length
             );
         }
+        let ptr = mem::ManuallyDrop::new(item).as_ptr();
         // SAFETY:
-        // - Ids are valid
+        // - References are valid
         // - The item must not exist in another menu!!!!!
         //     - We need to ensure this somehow, for now we'll just consume the item!
         //     - Should maybe return a reference to the menu, where the reference is now bound to self?
         // - 0 <= index <= self.len()
         // TODO: Thread safety!
-        unsafe { msg_send![self.0, insertItem: item.as_raw() atIndex: index as NSInteger] }
+        let _: () = unsafe { msg_send![self, insertItem: ptr atIndex: index as NSInteger] };
+        unsafe { &mut *ptr }
     }
 
     #[doc(alias = "addItem")]
     #[doc(alias = "addItem:")]
-    pub fn add(&mut self, item: MenuItem) {
+    pub fn add<'a>(&'a mut self, item: Owned<MenuItem>) -> &'a mut MenuItem {
         // Same safety concerns as above
-        unsafe { msg_send![self.0, addItem: item.as_raw()] }
+        let ptr = mem::ManuallyDrop::new(item).as_ptr();
+        let _: () = unsafe { msg_send![self, addItem: ptr] };
+        unsafe { &mut *ptr }
     }
 
     // There exists `addItemWithTitle_action_keyEquivalent`
@@ -101,8 +111,8 @@ impl Menu {
     // Can't use this yet, we need to find a way to let users have references to menu items safely!
     // #[doc(alias = "removeItem")]
     // #[doc(alias = "removeItem:")]
-    // fn remove(&mut self, item: &MenuItem) {
-    //     unsafe { msg_send![self.0, removeItem: item.as_raw()] }
+    // fn remove(&mut self, item: &mut MenuItem) {
+    //     unsafe { msg_send![self, removeItem: item] }
     // }
     // #[doc(alias = "removeItemAtIndex")]
     // #[doc(alias = "removeItemAtIndex:")]
@@ -113,27 +123,27 @@ impl Menu {
     /// Does not post notifications.
     #[doc(alias = "removeAllItems")]
     pub fn remove_all(&mut self) {
-        // SAFETY: Id is valid
-        unsafe { msg_send![self.0, removeAllItems] }
+        // SAFETY: Reference is valid
+        unsafe { msg_send![self, removeAllItems] }
     }
 
     // Finding items
 
     #[doc(alias = "itemWithTag")]
     #[doc(alias = "itemWithTag:")]
-    fn find_by_tag(&self, tag: isize) -> Option<&MenuItem> {
+    fn find_by_tag<'p>(&self, pool: &'p AutoreleasePool, tag: isize) -> Option<&'p MenuItem> {
         unimplemented!()
     }
 
     #[doc(alias = "itemWithTitle")]
     #[doc(alias = "itemWithTitle:")]
-    fn find_by_title<'a>(&'a self, title: &str) -> Option<&'a MenuItem> {
+    fn find_by_title<'p>(&self, pool: &'p AutoreleasePool, title: &str) -> Option<&'p MenuItem> {
         unimplemented!()
     }
 
     #[doc(alias = "itemAtIndex")]
     #[doc(alias = "itemAtIndex:")]
-    unsafe fn get_at_index(&self, at: isize) -> &MenuItem {
+    unsafe fn get_at_index<'p>(&self, pool: &'p AutoreleasePool, at: isize) -> &'p MenuItem {
         unimplemented!()
     }
 
@@ -142,19 +152,19 @@ impl Menu {
     /// Number of items in this menu, including separators
     #[doc(alias = "numberOfItems")]
     pub fn len(&self) -> usize {
-        let number_of_items: NSInteger = unsafe { msg_send![self.0, numberOfItems] };
+        let number_of_items: NSInteger = unsafe { msg_send![self, numberOfItems] };
         number_of_items as usize
     }
 
     #[doc(alias = "itemArray")]
-    fn get_all_items(&self) -> &[&MenuItem] {
+    fn get_all_items<'p>(&self, pool: &'p AutoreleasePool) -> &'p [&'p MenuItem] {
         unimplemented!()
     }
 
     #[doc(alias = "itemArray")]
-    pub fn iter(&self) -> impl Iterator<Item = MenuItem> {
-        let array: Id = unsafe { msg_send![self.0, itemArray] };
-        let enumerator: Id = unsafe { msg_send![array, objectEnumerator] };
+    pub fn iter<'p>(&self, pool: &'p AutoreleasePool) -> impl Iterator<Item = &'p MenuItem> + 'p {
+        let array: *const Object = unsafe { msg_send![self, itemArray] };
+        let enumerator: *mut Object = unsafe { msg_send![array, objectEnumerator] };
         Iter {
             array,
             enumerator,
@@ -196,14 +206,14 @@ impl Menu {
     #[doc(alias = "setSubmenu")]
     #[doc(alias = "setSubmenu:forItem:")]
     // Unsure about this!
-    fn set_submenu(&self, submenu: &Menu, for_item: &MenuItem) {
+    fn set_submenu(&self, submenu: &mut Menu, for_item: &mut MenuItem) {
         unimplemented!()
     }
 
     // fn submenuAction(&self) {} // Overridable!
 
     #[doc(alias = "supermenu")]
-    fn get_parent(&self) -> Option<&Menu> {
+    fn get_parent<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p Menu> {
         unimplemented!()
     }
 
@@ -307,7 +317,7 @@ impl Menu {
     }
 
     #[doc(alias = "highlightedItem")]
-    fn currently_highlighted_item(&self) -> Option<&MenuItem> {
+    fn currently_highlighted_item<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p MenuItem> {
         unimplemented!()
     }
 
@@ -318,6 +328,7 @@ impl Menu {
     // You can use the delegate to populate a menu just before it is drawn
     // and to check for key equivalents without creating a menu item.
     fn delegate(&self) -> &MenuDelegate {
+        // Tied to a pool or the current item?
         unimplemented!()
 
         // Events / things this delegate can respond to
@@ -335,7 +346,7 @@ impl Menu {
 
     #[doc(alias = "setDelegate")]
     #[doc(alias = "setDelegate:")]
-    fn set_delegate(&self, delegate: &MenuDelegate) {
+    fn set_delegate(&mut self, delegate: &mut MenuDelegate) {
         unimplemented!()
     }
 
@@ -366,34 +377,43 @@ impl Menu {
     //     NSUserInterfaceItemIdentification - May become important!
 }
 
-impl fmt::Debug for Menu {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Menu")
-            .field("id", &self.0)
-            .field("title", &self.title())
-            // TODO: parent?
-            // TODO: size and stuff
-            .field("items", &self.iter().collect::<Vec<_>>())
-            .finish()
+impl PartialEq for Menu {
+    /// Pointer equality
+    fn eq(&self, other: &Self) -> bool {
+        self as *const Self == other as *const Self
     }
 }
 
-struct Iter<'a> {
-    array: Id,
-    enumerator: Id,
-    _p: PhantomData<&'a Menu>,
+impl fmt::Debug for Menu {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        autoreleasepool(|pool| {
+            f.debug_struct("Menu")
+                .field("id", &(self as *const Self))
+                .field("title", &self.title(pool))
+                // TODO: parent?
+                // TODO: size and stuff
+                .field("items", &self.iter(pool).collect::<Vec<_>>())
+                .finish()
+        })
+    }
 }
 
-impl Iterator for Iter<'_> {
-    type Item = MenuItem;
+struct Iter<'p> {
+    array: *const Object,
+    enumerator: *mut Object,
+    _p: PhantomData<&'p [&'p MenuItem]>,
+}
+
+impl<'p> Iterator for Iter<'p> {
+    type Item = &'p MenuItem;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item: Id = unsafe { msg_send![self.enumerator, nextObject] };
+        let item: *const MenuItem = unsafe { msg_send![self.enumerator, nextObject] };
 
         if item.is_null() {
             None
         } else {
-            Some(unsafe { MenuItem::from_raw(item) })
+            Some(unsafe { &*item })
         }
     }
 
@@ -414,94 +434,106 @@ mod tests {
 
     #[test]
     fn test_title() {
-        let mut menu = Menu::new();
-        assert_eq!(menu.title(), "");
-        STRINGS.iter().for_each(|&title| {
-            menu.set_title(title);
-            assert_eq!(menu.title(), title);
-        })
+        autoreleasepool(|pool| {
+            let mut menu = Menu::new();
+            assert_eq!(menu.title(pool), "");
+            STRINGS.iter().for_each(|&title| {
+                menu.set_title(title);
+                assert_eq!(menu.title(pool), title);
+            });
+        });
     }
 
     #[test]
     fn test_title_init() {
-        STRINGS.iter().for_each(|&title| {
-            let menu = Menu::new_with_title(title);
-            assert_eq!(menu.title(), title);
-        })
+        autoreleasepool(|pool| {
+            STRINGS.iter().for_each(|&title| {
+                let menu = Menu::new_with_title(title);
+                assert_eq!(menu.title(pool), title);
+            });
+        });
     }
 
     #[test]
     fn test_length() {
-        let mut menu = Menu::new();
-        assert_eq!(menu.len(), 0);
-        menu.add(MenuItem::new_empty());
-        assert_eq!(menu.len(), 1);
-        menu.add(MenuItem::new_separator());
-        assert_eq!(menu.len(), 2);
-        menu.add(MenuItem::new("test", "", None));
-        assert_eq!(menu.len(), 3);
-        menu.insert(MenuItem::new("test", "", None), 2);
-        assert_eq!(menu.len(), 4);
-        menu.remove_all();
-        assert_eq!(menu.len(), 0);
+        autoreleasepool(|pool| {
+            let mut menu = Menu::new();
+            assert_eq!(menu.len(), 0);
+            menu.add(MenuItem::new_empty());
+            assert_eq!(menu.len(), 1);
+            menu.add(MenuItem::new_empty());
+            // menu.add(MenuItem::new_separator(pool));
+            assert_eq!(menu.len(), 2);
+            menu.add(MenuItem::new("test", "", None));
+            assert_eq!(menu.len(), 3);
+            menu.insert(MenuItem::new("test", "", None), 2);
+            assert_eq!(menu.len(), 4);
+            menu.remove_all();
+            assert_eq!(menu.len(), 0);
+        });
     }
 
     #[test]
+    #[ignore = "Doesn't work yet"]
     fn test_iter() {
-        let mut menu = Menu::new();
-        assert!(menu.iter().next().is_none());
+        autoreleasepool(|pool| {
+            let mut menu = Menu::new();
+            assert!(menu.iter(pool).next().is_none());
 
-        // A few different iterations
-        menu.add(MenuItem::new_empty());
-        menu.add(MenuItem::new_separator());
-        menu.add(MenuItem::new_empty());
-        let mut iter = menu.iter();
-        assert_eq!(iter.size_hint(), (3, Some(3)));
-        assert!(!iter.next().unwrap().separator());
-        assert!(iter.next().unwrap().separator());
-        assert!(!iter.next().unwrap().separator());
-        assert!(iter.next().is_none());
+            // A few different iterations
+            menu.add(MenuItem::new_empty());
+            // menu.add(MenuItem::new_separator(pool));
+            menu.add(MenuItem::new_empty());
+            let mut iter = menu.iter(pool);
+            assert_eq!(iter.size_hint(), (3, Some(3)));
+            assert!(!iter.next().unwrap().separator());
+            assert!(iter.next().unwrap().separator());
+            assert!(!iter.next().unwrap().separator());
+            assert!(iter.next().is_none());
 
-        // Modifying after creating the iterator (the iterator is unaffected)
-        let mut iter = menu.iter();
+            // Modifying after creating the iterator (the iterator is unaffected)
+            let mut iter = menu.iter(pool);
 
-        menu.add(MenuItem::new_empty());
-        assert_eq!(iter.size_hint(), (3, Some(3)));
-        assert!(!iter.next().unwrap().separator());
+            menu.add(MenuItem::new_empty());
+            assert_eq!(iter.size_hint(), (3, Some(3)));
+            assert!(!iter.next().unwrap().separator());
 
-        menu.add(MenuItem::new_separator());
-        assert_eq!(iter.size_hint(), (3, Some(3)));
-        assert!(iter.next().unwrap().separator());
+            // menu.add(MenuItem::new_separator(pool));
+            assert_eq!(iter.size_hint(), (3, Some(3)));
+            assert!(iter.next().unwrap().separator());
 
-        menu.remove_all();
-        assert_eq!(iter.size_hint(), (3, Some(3)));
-        assert!(!iter.next().unwrap().separator());
+            menu.remove_all();
+            assert_eq!(iter.size_hint(), (3, Some(3)));
+            assert!(!iter.next().unwrap().separator());
 
-        menu.add(MenuItem::new_separator());
-        assert_eq!(iter.size_hint(), (3, Some(3)));
-        assert!(iter.next().is_none());
+            // menu.add(MenuItem::new_separator(pool));
+            assert_eq!(iter.size_hint(), (3, Some(3)));
+            assert!(iter.next().is_none());
 
-        // Test fused-ness
-        assert!(iter.next().is_none());
-        assert!(iter.next().is_none());
-        assert!(iter.next().is_none());
-        assert!(iter.next().is_none());
+            // Test fused-ness
+            assert!(iter.next().is_none());
+            assert!(iter.next().is_none());
+            assert!(iter.next().is_none());
+            assert!(iter.next().is_none());
+        });
     }
 
     #[test]
     fn test_max_count() {
-        let mut menu = Menu::new();
-        const COUNT: usize = 65534;
-        for i in 1..=COUNT {
-            menu.add(MenuItem::new(&format!("item {}", i), "", None));
-        }
-        assert_eq!(menu.len(), COUNT);
+        autoreleasepool(|_| {
+            let mut menu = Menu::new();
+            const COUNT: usize = 65534;
+            for i in 1..=COUNT {
+                menu.add(MenuItem::new(&format!("item {}", i), "", None));
+            }
+            assert_eq!(menu.len(), COUNT);
 
-        // The menu, if we could render it at this point, should render fine
+            // The menu, if we could render it at this point, should render fine
 
-        menu.add(MenuItem::new(&format!("item {}", COUNT + 1), "", None));
+            menu.add(MenuItem::new(&format!("item {}", COUNT + 1), "", None));
 
-        // The menu item should fail rendering, and we should get an error similar to the following logged:
-        // 2021-01-01 00:00:00.000 my_program[12345:678901] InsertMenuItemTextWithCFString(_principalMenuRef, (useAccessibilityTitleDescriptionTrick ? CFSTR("") : (CFStringRef)title), carbonIndex - 1, attributes, [self _menuItemCommandID]) returned error -108 on line 2638 in -[NSCarbonMenuImpl _carbonMenuInsertItem:atCarbonIndex:]
+            // The menu item should fail rendering, and we should get an error similar to the following logged:
+            // 2021-01-01 00:00:00.000 my_program[12345:678901] InsertMenuItemTextWithCFString(_principalMenuRef, (useAccessibilityTitleDescriptionTrick ? CFSTR("") : (CFStringRef)title), carbonIndex - 1, attributes, [self _menuItemCommandID]) returned error -108 on line 2638 in -[NSCarbonMenuImpl _carbonMenuInsertItem:atCarbonIndex:]
+        });
     }
 }

@@ -5,7 +5,11 @@ use env_logger;
 #[cfg(target_os = "macos")]
 use menubar::macos::{InitializedApplication, Menu, MenuBar, MenuItem, MenuItemState};
 #[cfg(target_os = "macos")]
-use objc::{class, msg_send, sel};
+use objc::{
+    class, msg_send,
+    rc::{autoreleasepool, Owned, Retained},
+    sel,
+};
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::error::Error;
 #[cfg(target_os = "macos")]
@@ -32,23 +36,22 @@ fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
     #[cfg(target_os = "macos")]
-    let (menubar, mut window_menu, mut services_menu, mut help_menu) = {
-        let mut services_menu = ptr::null_mut();
+    let (menubar, window_menu, services_menu, help_menu) = {
+        let mut services_menu = None;
 
         let mut menubar = MenuBar::new(|menu| {
             menu.add(MenuItem::new("item 1", "a", None));
-            menu.add(MenuItem::new_separator());
+            // menu.add(MenuItem::new_separator());
             menu.add({
                 let mut item = MenuItem::new("Services", "", None);
-                item.set_submenu({
+                services_menu = item.set_submenu({
                     let mut submenu = Menu::new();
                     submenu.add(MenuItem::new("will get removed or disappear?", "", None));
-                    services_menu = unsafe { submenu.as_raw() };
                     Some(submenu)
                 });
                 item
             });
-            menu.add(MenuItem::new_separator());
+            // menu.add(MenuItem::new_separator());
             // let mut item = unsafe {
             //     MenuItem::from_raw(msg_send![class!(NSMenuItem), separatorItem])
             // };
@@ -91,9 +94,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 item
             });
             let mut item = MenuItem::new("item x", "f", None);
-            assert_eq!(item.title(), "item x");
-            item.set_title("item 4");
-            assert_eq!(item.title(), "item 4");
+            autoreleasepool(|pool| {
+                assert_eq!(item.title(pool), "item x");
+                item.set_title("item 4");
+                assert_eq!(item.title(pool), "item 4");
+            });
             menu.add(item);
         });
 
@@ -113,10 +118,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             menu.add(item);
         });
 
-        let mut window_menu = ptr::null_mut();
-
-        menubar.add("Window menu", |menu| {
-            window_menu = unsafe { menu.as_raw() };
+        let window_menu = menubar.add("Window menu", |menu| {
             menu.add(MenuItem::new("Will be above the window data", "", None));
         });
 
@@ -193,10 +195,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             assert_eq!(menu.len(), 0);
         });
 
-        let mut help_menu = ptr::null_mut();
-
-        menubar.add("Help menu", |menu| {
-            help_menu = unsafe { menu.as_raw() };
+        let help_menu = menubar.add("Help menu", |menu| {
             menu.add(MenuItem::new("Will be below the help search box", "", None));
         });
 
@@ -219,14 +218,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             assert_eq!(menu.len(), COUNT);
         });
 
-        unsafe {
-            (
-                menubar,
-                Menu::from_raw(window_menu),
-                Menu::from_raw(services_menu),
-                Menu::from_raw(help_menu),
-            )
-        }
+        (menubar, window_menu, services_menu.unwrap(), help_menu)
     };
 
     // #[cfg(target_os = "macos")]
@@ -339,6 +331,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("before event loop");
 
+    let menubar = std::cell::Cell::new(Some(menubar));
+
     event_loop.run(move |event, event_loop, control_flow| {
         *control_flow = ControlFlow::Wait;
 
@@ -348,12 +342,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                 #[cfg(target_os = "macos")]
                 {
                     let app = unsafe { InitializedApplication::new() };
-                    app.set_window_menu(&mut window_menu);
-                    app.set_services_menu(&mut services_menu);
-                    app.set_help_menu(Some(&mut help_menu));
+                    app.set_window_menu(&window_menu);
+                    app.set_services_menu(&services_menu);
+                    app.set_help_menu(Some(&help_menu));
 
-                    app.set_menubar(&menubar);
-                    unsafe { assert_eq!(menubar.as_raw(), app.menubar().unwrap().as_raw()) };
+                    let menubar = app.set_menubar(menubar.take().unwrap());
+                    autoreleasepool(|pool| assert_eq!(&*menubar, app.menubar(pool).unwrap()));
                 }
             }
             Event::WindowEvent {

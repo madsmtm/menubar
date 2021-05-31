@@ -1,55 +1,66 @@
-use super::menu::Menu;
-use super::menubar::MenuBar;
-use super::util::{nil, to_nsstring, Id};
+use core::cell::UnsafeCell;
 use core::marker::PhantomData;
-use objc::runtime::{Class, BOOL, NO, YES};
+use objc::rc::{AutoreleasePool, Owned, Retained};
+use objc::runtime::{Class, Object, BOOL, NO, YES};
 use objc::{class, msg_send, sel};
 
-/// Helper to make various functions on the global application safe
+use super::menu::Menu;
+use super::menubar::MenuBar;
+
+/// Helper to make various functions on the global application object safe.
 #[doc(alias = "NSApp")]
 #[doc(alias = "NSApplication")]
+#[repr(C)]
 pub struct InitializedApplication {
-    ns_app: Id,
+    /// The application contains syncronization primitives that allows mutable
+    /// access with an immutable reference, and hence need to be `UnsafeCell`.
+    ///
+    /// TODO: Verify this claim.
+    _priv: UnsafeCell<[u8; 0]>,
 }
 
+unsafe impl<'a> objc::Encode for &'a InitializedApplication {
+    const ENCODING: objc::Encoding<'static> = objc::Encoding::Object;
+}
+
+unsafe impl<'a> objc::Encode for &'a mut InitializedApplication {
+    const ENCODING: objc::Encoding<'static> = objc::Encoding::Object;
+}
+
+unsafe impl objc::Message for InitializedApplication {}
+unsafe impl Sync for InitializedApplication {}
+
 impl InitializedApplication {
-    /// SAFETY: Must not be called before `applicationDidFinishLaunching` has run!
+    /// # Safety
     ///
-    /// In `winit`, this is at or after [`winit::event::StartCause::Init`] has been emitted.
+    /// This must not be called before `applicationDidFinishLaunching`.
+    ///
+    /// In `winit`, this is at or after
+    /// [`winit::event::StartCause::Init`] has been emitted.
     #[doc(alias = "sharedApplication")]
-    pub unsafe fn new() -> Self {
-        let ns_app = msg_send![class!(NSApplication), sharedApplication];
-        InitializedApplication { ns_app }
+    pub unsafe fn new() -> &'static Self {
+        msg_send![class!(NSApplication), sharedApplication]
     }
 
     #[doc(alias = "mainMenu")]
-    pub fn menubar(&self) -> Option<MenuBar> {
-        let main_menu: Id = unsafe { msg_send![self.ns_app, mainMenu] };
-        if main_menu != nil {
-            Some(unsafe { MenuBar::from_raw(main_menu) })
-        } else {
-            None
-        }
+    pub fn menubar<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p Menu> {
+        unsafe { msg_send![self, mainMenu] }
     }
 
     /// Setting the menubar to `null` does not work properly, so we don't allow
     /// that functionality here!
     #[doc(alias = "setMainMenu")]
     #[doc(alias = "setMainMenu:")]
-    pub fn set_menubar(&self, menubar: &MenuBar) {
-        // TODO: Should we consume menubar here?
-        unsafe { msg_send![self.ns_app, setMainMenu: menubar.as_raw()] }
+    pub fn set_menubar(&self, menubar: MenuBar) -> Retained<Menu> {
+        let menu = menubar.into_raw();
+        let _: () = unsafe { msg_send![self, setMainMenu: menu.as_ptr()] };
+        menu.into()
     }
 
     /// Returns the first menu set with [`set_window_menu`]
     #[doc(alias = "windowsMenu")]
-    pub fn window_menu(&self) -> Option<Menu> {
-        let window_menu: Id = unsafe { msg_send![self.ns_app, windowsMenu] };
-        if window_menu != nil {
-            Some(unsafe { Menu::from_raw(window_menu) })
-        } else {
-            None
-        }
+    pub fn window_menu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p Menu> {
+        unsafe { msg_send![self, windowsMenu] }
     }
 
     /// Set the global window menu.
@@ -68,19 +79,15 @@ impl InitializedApplication {
     /// though this is not recommended.
     #[doc(alias = "setWindowsMenu")]
     #[doc(alias = "setWindowsMenu:")]
-    pub fn set_window_menu(&self, menu: &mut Menu) {
-        let _: () = unsafe { msg_send![self.ns_app, setWindowsMenu: menu.as_raw()] };
+    pub fn set_window_menu(&self, menu: &Menu) {
+        // TODO: Is it safe to immutably set this?
+        unsafe { msg_send![self, setWindowsMenu: menu] }
     }
 
     /// Returns the first menu set with [`set_services_menu`]
     #[doc(alias = "servicesMenu")]
-    pub fn services_menu(&self) -> Option<Menu> {
-        let services_menu: Id = unsafe { msg_send![self.ns_app, servicesMenu] };
-        if services_menu != nil {
-            Some(unsafe { Menu::from_raw(services_menu) })
-        } else {
-            None
-        }
+    pub fn services_menu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p Menu> {
+        unsafe { msg_send![self, servicesMenu] }
     }
 
     /// Set the global services menu.
@@ -95,23 +102,19 @@ impl InitializedApplication {
     /// more than once, but this is really flaky.
     #[doc(alias = "setServicesMenu")]
     #[doc(alias = "setServicesMenu:")]
-    pub fn set_services_menu(&self, menu: &mut Menu) {
+    pub fn set_services_menu(&self, menu: &Menu) {
+        // TODO: Is it safe to immutably set this?
         // TODO: The menu should (must?) not contain any items!
         // TODO: Setting this and pressing the close button doesn't work in winit
-        let _: () = unsafe { msg_send![self.ns_app, setServicesMenu: menu.as_raw()] };
+        unsafe { msg_send![self, setServicesMenu: menu] }
     }
 
     // TODO: registerServicesMenuSendTypes
 
     /// Get the menu that is currently assigned as the help menu, or `None` if the system is configured to autodetect this.
     #[doc(alias = "helpMenu")]
-    pub fn help_menu(&self) -> Option<Menu> {
-        let help_menu: Id = unsafe { msg_send![self.ns_app, helpMenu] };
-        if help_menu != nil {
-            Some(unsafe { Menu::from_raw(help_menu) })
-        } else {
-            None
-        }
+    pub fn help_menu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p Menu> {
+        unsafe { msg_send![self, helpMenu] }
     }
 
     /// Set the global menu that should have the spotlight Help Search
@@ -122,12 +125,9 @@ impl InitializedApplication {
     /// To prevent this, specify a menu that does not appear anywhere.
     #[doc(alias = "setHelpMenu")]
     #[doc(alias = "setHelpMenu:")]
-    pub fn set_help_menu(&self, menu: Option<&mut Menu>) {
-        let help_menu: Id = match menu {
-            Some(menu) => unsafe { menu.as_raw() },
-            None => nil,
-        };
-        let _: () = unsafe { msg_send![self.ns_app, setHelpMenu: help_menu] };
+    pub fn set_help_menu(&self, menu: Option<&Menu>) {
+        // TODO: Is it safe to immutably set this?
+        unsafe { msg_send![self, setHelpMenu: menu] }
     }
 
     // TODO: applicationDockMenu (the application delegate should implement this function)
@@ -152,7 +152,7 @@ impl InitializedApplication {
     // Only available on the global menu bar object
     // #[doc(alias = "menuBarHeight")]
     // pub fn global_height(&self) -> f64 {
-    //     let height: CGFloat = unsafe { msg_send![self.0.as_raw(), menuBarHeight] };
+    //     let height: CGFloat = unsafe { msg_send![self, menuBarHeight] };
     //     height
     // }
 }
@@ -160,12 +160,13 @@ impl InitializedApplication {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use objc::rc::autoreleasepool;
 
-    fn init_app() -> InitializedApplication {
+    fn init_app() -> &'static InitializedApplication {
         unimplemented!()
     }
 
-    fn create_menu() -> Menu {
+    fn create_menu() -> Owned<Menu> {
         unimplemented!()
     }
 
@@ -173,17 +174,19 @@ mod tests {
     #[ignore = "not implemented"]
     fn test_services_menu() {
         let app = init_app();
-        let mut menu1 = create_menu();
-        let mut menu2 = create_menu();
+        let menu1 = create_menu();
+        let menu2 = create_menu();
 
-        assert!(app.services_menu().is_none());
+        autoreleasepool(|pool| {
+            assert!(app.services_menu(pool).is_none());
 
-        app.set_services_menu(&mut menu1);
-        unsafe { assert_eq!(app.services_menu().unwrap().as_raw(), menu1.as_raw()) };
+            app.set_services_menu(&menu1);
+            assert_eq!(app.services_menu(pool).unwrap(), &*menu1);
 
-        app.set_services_menu(&mut menu2);
-        unsafe { assert_eq!(app.services_menu().unwrap().as_raw(), menu2.as_raw()) };
+            app.set_services_menu(&menu2);
+            assert_eq!(app.services_menu(pool).unwrap(), &*menu2);
 
-        // At this point `menu1` still shows as a services menu...
+            // At this point `menu1` still shows as a services menu...
+        });
     }
 }

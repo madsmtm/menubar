@@ -1,13 +1,9 @@
 use core::ptr;
+use objc::rc::{AutoreleasePool, Owned};
 use objc::runtime::Object;
 use objc::{class, msg_send, sel};
 use std::ffi;
 use std::os::raw;
-
-pub type Id = *mut Object;
-
-#[allow(non_upper_case_globals)]
-pub const nil: Id = ptr::null_mut();
 
 // https://developer.apple.com/documentation/objectivec/nsinteger?language=objc
 
@@ -26,35 +22,60 @@ pub type NSUInteger = raw::c_ulong;
 // https://developer.apple.com/documentation/foundation/1497293-string_encodings/nsutf8stringencoding?language=objc
 const NS_UTF8_STRING_ENCODING: NSUInteger = 4;
 
-pub fn to_nsstring(string: &str) -> Id {
-    unsafe {
-        let id: Id = msg_send![class!(NSString), alloc];
-        msg_send![
-            id,
-            initWithBytes: string.as_ptr() as *const ffi::c_void
-            length: string.len() as NSUInteger
-            encoding: NS_UTF8_STRING_ENCODING
-        ]
-    }
+#[repr(C)]
+pub struct NSString {
+    _priv: [u8; 0],
 }
 
-pub unsafe fn from_nsstring<'a>(nsstring: Id) -> &'a str {
-    let res = msg_send![nsstring, UTF8String];
-    let cstring = ffi::CStr::from_ptr(res);
-    cstring.to_str().unwrap()
+unsafe impl<'a> objc::Encode for &'a NSString {
+    const ENCODING: objc::Encoding<'static> = objc::Encoding::Object;
+}
+
+unsafe impl<'a> objc::Encode for &'a mut NSString {
+    const ENCODING: objc::Encoding<'static> = objc::Encoding::Object;
+}
+
+unsafe impl objc::Message for NSString {}
+
+unsafe impl Send for NSString {}
+unsafe impl Sync for NSString {}
+
+impl NSString {
+    pub fn from_str(s: &str) -> Owned<Self> {
+        unsafe {
+            let id: *mut Self = msg_send![class!(NSString), alloc];
+            Owned::new(msg_send![
+                id,
+                initWithBytes: s.as_ptr() as *const ffi::c_void
+                length: s.len() as NSUInteger
+                encoding: NS_UTF8_STRING_ENCODING
+            ])
+        }
+    }
+
+    pub fn to_str<'p>(&self, pool: &'p AutoreleasePool) -> &'p str {
+        unsafe {
+            let res = msg_send![self, UTF8String];
+            let cstring = ffi::CStr::from_ptr(res);
+            cstring.to_str().unwrap()
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::NSString;
     use crate::test_util::STRINGS;
+    use objc::rc::autoreleasepool;
 
     #[test]
     fn test_nsstring() {
-        STRINGS.iter().for_each(|&s| {
-            let id = to_nsstring(s);
-            let s2 = unsafe { from_nsstring(id) };
-            assert_eq!(s, s2);
-        })
+        autoreleasepool(|pool| {
+            STRINGS.iter().for_each(|&s| {
+                let nsstring = NSString::from_str(s);
+                let s2 = nsstring.to_str(pool);
+                assert_eq!(s, s2);
+            });
+        });
     }
 }
