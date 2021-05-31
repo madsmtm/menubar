@@ -75,10 +75,20 @@ impl MenuItem {
         }
     }
 
+
     #[doc(alias = "separatorItem")]
-    pub fn new_separator<'p>(pool: &'p AutoreleasePool) -> &'p mut Self {
-        unsafe { msg_send![class!(NSMenuItem), separatorItem] }
+    pub fn new_separator() -> Owned<Self> {
+        let ptr: *const Self = unsafe { msg_send![class!(NSMenuItem), separatorItem] };
+        // TODO: Find an ergonomic API where we don't need to retain. Also,
+        // this has a memory leak if there's no `autoreleasepool` to release
+        // the returned pointer.
+        unsafe { Owned::from_retained(Retained::retain(ptr)) }
     }
+
+    // fn new_separator<'p>(pool: &'p AutoreleasePool) -> &'p mut Self {
+    //     unsafe { msg_send![class!(NSMenuItem), separatorItem] }
+    // }
+
 
     // Enabling
 
@@ -389,8 +399,8 @@ mod tests {
     use super::*;
     use crate::test_util::STRINGS;
 
-    fn for_each_item(pool: &AutoreleasePool, mut f: impl FnMut(&mut MenuItem)) {
-        f(MenuItem::new_separator(pool));
+    fn for_each_item(_pool: &AutoreleasePool, mut f: impl FnMut(&mut MenuItem)) {
+        f(&mut *MenuItem::new_separator());
         f(&mut *MenuItem::new_empty());
         f(&mut *MenuItem::new("", "", None));
     }
@@ -435,15 +445,15 @@ mod tests {
         autoreleasepool(|pool| {
             let item = MenuItem::new_empty();
             assert_eq!(item.title(pool), "NSMenuItem");
-            let item = MenuItem::new_separator(pool);
+            let item = MenuItem::new_separator();
             assert_eq!(item.title(pool), "");
         });
     }
 
     #[test]
     fn test_separator() {
-        autoreleasepool(|pool| {
-            let item = MenuItem::new_separator(pool);
+        autoreleasepool(|_| {
+            let item = MenuItem::new_separator();
             assert!(item.separator());
             let item = MenuItem::new_empty();
             assert!(!item.separator());

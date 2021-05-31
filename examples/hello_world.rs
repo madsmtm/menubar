@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         let mut menubar = MenuBar::new(|menu| {
             menu.add(MenuItem::new("item 1", "a", None));
-            // menu.add(MenuItem::new_separator());
+            menu.add(MenuItem::new_separator());
             menu.add({
                 let mut item = MenuItem::new("Services", "", None);
                 services_menu = item.set_submenu({
@@ -51,7 +51,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 });
                 item
             });
-            // menu.add(MenuItem::new_separator());
+            menu.add(MenuItem::new_separator());
             // let mut item = unsafe {
             //     MenuItem::from_raw(msg_send![class!(NSMenuItem), separatorItem])
             // };

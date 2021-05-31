@@ -462,8 +462,7 @@ mod tests {
             assert_eq!(menu.len(), 0);
             menu.add(MenuItem::new_empty());
             assert_eq!(menu.len(), 1);
-            menu.add(MenuItem::new_empty());
-            // menu.add(MenuItem::new_separator(pool));
+            menu.add(MenuItem::new_separator());
             assert_eq!(menu.len(), 2);
             menu.add(MenuItem::new("test", "", None));
             assert_eq!(menu.len(), 3);
@@ -475,7 +474,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Doesn't work yet"]
     fn test_iter() {
         autoreleasepool(|pool| {
             let mut menu = Menu::new();
@@ -483,13 +481,13 @@ mod tests {
 
             // A few different iterations
             menu.add(MenuItem::new_empty());
-            // menu.add(MenuItem::new_separator(pool));
             menu.add(MenuItem::new_empty());
+            menu.add(MenuItem::new_separator());
             let mut iter = menu.iter(pool);
             assert_eq!(iter.size_hint(), (3, Some(3)));
             assert!(!iter.next().unwrap().separator());
-            assert!(iter.next().unwrap().separator());
             assert!(!iter.next().unwrap().separator());
+            assert!(iter.next().unwrap().separator());
             assert!(iter.next().is_none());
 
             // Modifying after creating the iterator (the iterator is unaffected)
@@ -499,15 +497,15 @@ mod tests {
             assert_eq!(iter.size_hint(), (3, Some(3)));
             assert!(!iter.next().unwrap().separator());
 
-            // menu.add(MenuItem::new_separator(pool));
-            assert_eq!(iter.size_hint(), (3, Some(3)));
-            assert!(iter.next().unwrap().separator());
-
-            menu.remove_all();
+            menu.add(MenuItem::new_separator());
             assert_eq!(iter.size_hint(), (3, Some(3)));
             assert!(!iter.next().unwrap().separator());
 
-            // menu.add(MenuItem::new_separator(pool));
+            menu.remove_all();
+            assert_eq!(iter.size_hint(), (3, Some(3)));
+            assert!(iter.next().unwrap().separator());
+
+            menu.add(MenuItem::new_separator());
             assert_eq!(iter.size_hint(), (3, Some(3)));
             assert!(iter.next().is_none());
 
