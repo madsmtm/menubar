@@ -237,18 +237,14 @@ impl MenuItem {
 
     #[doc(alias = "setSubmenu")]
     #[doc(alias = "setSubmenu:")]
-    pub fn set_submenu<'a>(&'a mut self, menu: Option<Owned<Menu>>) -> Option<&'a mut Menu> {
+    pub fn set_submenu(&mut self, menu: Option<Owned<Menu>>) -> Option<Retained<Menu>> {
         // The submenu must not already have a parent!
         let ptr: *mut Menu = match menu {
             Some(ref menu) => menu.as_ptr(),
             None => ptr::null_mut(),
         };
         let _: () = unsafe { msg_send![self, setSubmenu: ptr] };
-        if !ptr.is_null() {
-            Some(unsafe { &mut *ptr })
-        } else {
-            None
-        }
+        menu.map(|obj| obj.into())
     }
 
     #[doc(alias = "hasSubmenu")]
@@ -477,8 +473,8 @@ mod tests {
             for_each_item(pool, |item| {
                 assert!(item.submenu(pool).is_none());
                 let menu = Menu::new();
-                let menu = mem::ManuallyDrop::new(item.set_submenu(Some(menu)));
-                // assert_eq!(menu.as_deref(), item.submenu(pool));
+                let menu = item.set_submenu(Some(menu));
+                assert_eq!(item.submenu(pool), menu.as_deref());
                 item.set_submenu(None);
                 assert!(item.submenu(pool).is_none());
             })

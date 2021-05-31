@@ -12,7 +12,7 @@ env_logger = "0.8"
 [target.'cfg(target_os = "macos")'.dependencies]
 cocoa = "0.24"
 core-foundation = "0.9"
-objc = { git = "https://github.com/madsmtm/rust-objc", branch = "smart-references" }
+objc = { git = "https://github.com/madsmtm/rust-objc", rev = "d067bbd8d6da8a0ff56b3819dd11dcd10c15148a" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["winuser", "libloaderapi", "wincon"] }

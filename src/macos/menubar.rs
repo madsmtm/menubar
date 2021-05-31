@@ -24,14 +24,15 @@ impl MenuBar {
         menubar
     }
 
-    fn add_menu<'a>(&'a mut self, menu: Owned<Menu>) -> &'a Menu {
+    fn add_menu<'a>(&'a mut self, menu: Owned<Menu>) -> Retained<Menu> {
         // All parameters on menu items irrelevant in the menu bar
-        let item = MenuItem::new_empty();
-        let item = self.0.add(item);
-        item.set_submenu(Some(menu)).unwrap()
+        let mut item = MenuItem::new_empty();
+        let menu = item.set_submenu(Some(menu)).unwrap();
+        let _item = self.0.add(item);
+        menu
     }
 
-    pub fn add<'a>(&'a mut self, title: &str, f: impl FnOnce(&mut Menu) -> ()) -> &'a Menu {
+    pub fn add<'a>(&'a mut self, title: &str, f: impl FnOnce(&mut Menu) -> ()) -> Retained<Menu> {
         let mut menu = Menu::new_with_title(title);
         f(&mut menu);
         self.add_menu(menu)

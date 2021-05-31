@@ -77,7 +77,8 @@ impl Menu {
     /// Panics if `index > menu.len()`.
     #[doc(alias = "insertItem")]
     #[doc(alias = "insertItem:atIndex:")]
-    pub fn insert<'a>(&'a mut self, item: Owned<MenuItem>, index: usize) -> &'a mut MenuItem {
+    // TODO: Reorder arguments to match `Vec::insert`?
+    pub fn insert(&mut self, item: Owned<MenuItem>, index: usize) -> Retained<MenuItem> {
         let length = self.len();
         if index > length {
             panic!(
@@ -85,7 +86,6 @@ impl Menu {
                 index, length
             );
         }
-        let ptr = mem::ManuallyDrop::new(item).as_ptr();
         // SAFETY:
         // - References are valid
         // - The item must not exist in another menu!!!!!
@@ -93,17 +93,18 @@ impl Menu {
         //     - Should maybe return a reference to the menu, where the reference is now bound to self?
         // - 0 <= index <= self.len()
         // TODO: Thread safety!
-        let _: () = unsafe { msg_send![self, insertItem: ptr atIndex: index as NSInteger] };
-        unsafe { &mut *ptr }
+        let _: () = unsafe { msg_send![self, insertItem: item.as_ptr() atIndex: index as NSInteger] };
+        // The item is now shared, so it's no longer safe to hold a mutable pointer to it
+        item.into()
     }
 
     #[doc(alias = "addItem")]
     #[doc(alias = "addItem:")]
-    pub fn add<'a>(&'a mut self, item: Owned<MenuItem>) -> &'a mut MenuItem {
+    pub fn add(&mut self, item: Owned<MenuItem>) -> Retained<MenuItem> {
         // Same safety concerns as above
-        let ptr = mem::ManuallyDrop::new(item).as_ptr();
-        let _: () = unsafe { msg_send![self, addItem: ptr] };
-        unsafe { &mut *ptr }
+        let _: () = unsafe { msg_send![self, addItem: item.as_ptr()] };
+        // The item is now shared, so it's no longer safe to hold a mutable pointer to it
+        item.into()
     }
 
     // There exists `addItemWithTitle_action_keyEquivalent`
