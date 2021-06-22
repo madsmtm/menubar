@@ -19,7 +19,7 @@ categories = [
 ]
 
 [target.'cfg(target_os = "macos")'.dependencies]
-objc = { version = "0.2", git = "https://github.com/madsmtm/rust-objc", rev = "d067bbd8d6da8a0ff56b3819dd11dcd10c15148a" }
+objc = "0.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["winuser", "libloaderapi", "wincon"] }
@@ -28,3 +28,6 @@ winapi = { version = "0.3", features = ["winuser", "libloaderapi", "wincon"] }
 winit = "0.25"
 raw-window-handle = "0.3"
 env_logger = "0.8"
+
+[patch.crates-io]
+objc = { git = "https://github.com/madsmtm/rust-objc", rev = "d067bbd8d6da8a0ff56b3819dd11dcd10c15148a" }
