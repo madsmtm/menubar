@@ -1,3 +1,5 @@
+//! Cross-platform native menu library.
+
 // While testing
 #![allow(dead_code)]
 #![allow(unused_variables)]

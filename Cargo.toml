@@ -3,7 +3,20 @@ name = "menubar"
 version = "0.0.1"
 authors = ["Mads Marquart <mads@marquart.dk>"]
 edition = "2018"
+description = "Cross-platform native menu library."
+documentation = "https://docs.rs/menubar"
+readme = "README.md"
+repository = "https://github.com/madsmtm/menubar"
 license = "MIT OR Apache-2.0"
+keywords = ["menu", "context-menu", "native", "NSMenu", "HMENU"]
+categories = [
+    "accessibility",
+    "api-bindings",
+    "gui",
+    # "os::linux-apis",
+    "os::macos-apis",
+    "os::windows-apis",
+]
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = { git = "https://github.com/madsmtm/rust-objc", rev = "d067bbd8d6da8a0ff56b3819dd11dcd10c15148a" }
