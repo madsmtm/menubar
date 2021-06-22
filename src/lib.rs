@@ -1,5 +1,8 @@
 //! Cross-platform native menu library.
 
+// Update in Cargo.toml as well.
+#![doc(html_root_url = "https://docs.rs/menubar/0.0.1")]
+
 // While testing
 #![allow(dead_code)]
 #![allow(unused_variables)]
