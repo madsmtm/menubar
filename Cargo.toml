@@ -3,6 +3,7 @@ name = "menubar"
 version = "0.0.1"
 authors = ["Mads Marquart <mads@marquart.dk>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc = { git = "https://github.com/madsmtm/rust-objc", rev = "d067bbd8d6da8a0ff56b3819dd11dcd10c15148a" }
