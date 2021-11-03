@@ -7,7 +7,7 @@ use menubar::macos::{InitializedApplication, Menu, MenuBar, MenuItem, MenuItemSt
 #[cfg(target_os = "macos")]
 use objc::{
     class, msg_send,
-    rc::{autoreleasepool, Owned, Retained},
+    rc::{autoreleasepool, Owned},
     sel,
 };
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};

@@ -1,14 +1,14 @@
 use super::menu::Menu;
 use super::menuitem::MenuItem;
-use objc::rc::{Owned, Retained};
+use objc::rc::{Id, Owned, Shared};
 use objc::{class, msg_send, sel};
 
 /// Helper to make constructing the menu bar easier
 #[derive(Debug)]
-pub struct MenuBar(Owned<Menu>);
+pub struct MenuBar(Id<Menu, Owned>);
 
 impl MenuBar {
-    pub fn into_raw(self) -> Owned<Menu> {
+    pub fn into_raw(self) -> Id<Menu, Owned> {
         self.0
     }
 
@@ -24,7 +24,7 @@ impl MenuBar {
         menubar
     }
 
-    fn add_menu<'a>(&'a mut self, menu: Owned<Menu>) -> Retained<Menu> {
+    fn add_menu<'a>(&'a mut self, menu: Id<Menu, Owned>) -> Id<Menu, Shared> {
         // All parameters on menu items irrelevant in the menu bar
         let mut item = MenuItem::new_empty();
         let menu = item.set_submenu(Some(menu)).unwrap();
@@ -32,7 +32,7 @@ impl MenuBar {
         menu
     }
 
-    pub fn add<'a>(&'a mut self, title: &str, f: impl FnOnce(&mut Menu) -> ()) -> Retained<Menu> {
+    pub fn add<'a>(&'a mut self, title: &str, f: impl FnOnce(&mut Menu) -> ()) -> Id<Menu, Shared> {
         let mut menu = Menu::new_with_title(title);
         f(&mut menu);
         self.add_menu(menu)

@@ -1,12 +1,13 @@
 use core::fmt;
 use core::marker::PhantomData;
 use core::mem;
-use objc::rc::{autoreleasepool, AutoreleasePool, Owned, Retained};
+use objc::rc::{autoreleasepool, AutoreleasePool, Id, Owned, Shared};
 use objc::runtime::Object;
 use objc::{class, msg_send, sel};
+use objc_foundation::{INSString, NSString};
 
 use super::menuitem::MenuItem;
-use super::util::{NSInteger, NSString, NSUInteger};
+use super::util::{NSInteger, NSUInteger};
 
 struct MenuDelegate;
 
@@ -22,12 +23,8 @@ pub struct Menu {
     _priv: [u8; 0],
 }
 
-unsafe impl<'a> objc::Encode for &'a Menu {
-    const ENCODING: objc::Encoding<'static> = objc::Encoding::Object;
-}
-
-unsafe impl<'a> objc::Encode for &'a mut Menu {
-    const ENCODING: objc::Encoding<'static> = objc::Encoding::Object;
+unsafe impl objc::RefEncode for Menu {
+    const ENCODING_REF: objc::Encoding<'static> = objc::Encoding::Object;
 }
 
 unsafe impl objc::Message for Menu {}
@@ -35,50 +32,50 @@ unsafe impl objc::Message for Menu {}
 unsafe impl Send for Menu {}
 unsafe impl Sync for Menu {}
 
+/// Creating menus
 impl Menu {
-    // Creating menus
-
-    fn alloc() -> Owned<Self> {
-        unsafe { Owned::new(msg_send![class!(NSMenu), alloc]) }
+    fn alloc() -> *mut Self {
+        unsafe { msg_send![class!(NSMenu), alloc] }
     }
 
-    pub fn new() -> Owned<Self> {
-        let ptr = mem::ManuallyDrop::new(Self::alloc()).as_ptr();
-        unsafe { Owned::new(msg_send![ptr, init]) }
+    pub fn new() -> Id<Self, Owned> {
+        let ptr = Self::alloc();
+        unsafe { Id::new(msg_send![ptr, init]) }
     }
 
     // Public only locally to allow for construction in Menubar
     #[doc(alias = "initWithTitle")]
     #[doc(alias = "initWithTitle:")]
-    pub(super) fn new_with_title(title: &str) -> Owned<Self> {
+    pub(super) fn new_with_title(title: &str) -> Id<Self, Owned> {
         let title = NSString::from_str(title);
-        let ptr = mem::ManuallyDrop::new(Self::alloc()).as_ptr();
-        unsafe { Owned::new(msg_send![ptr, initWithTitle: title]) }
+        let ptr = Self::alloc();
+        unsafe { Id::new(msg_send![ptr, initWithTitle: &*title]) }
     }
 
     // Title (only useful for MenuBar!)
 
     pub(super) fn title<'p>(&self, pool: &'p AutoreleasePool) -> &'p str {
         let title: &NSString = unsafe { msg_send![self, title] };
-        title.to_str(pool)
+        title.as_str(pool)
     }
 
     #[doc(alias = "setTitle")]
     #[doc(alias = "setTitle:")]
     pub(super) fn set_title(&mut self, title: &str) {
         let title = NSString::from_str(title);
-        unsafe { msg_send![self, setTitle: title] }
+        unsafe { msg_send![self, setTitle: &*title] }
     }
+}
 
-    // Managing items
-
+/// Managing items
+impl Menu {
     /// Insert an item at the specified index.
     ///
     /// Panics if `index > menu.len()`.
     #[doc(alias = "insertItem")]
     #[doc(alias = "insertItem:atIndex:")]
     // TODO: Reorder arguments to match `Vec::insert`?
-    pub fn insert(&mut self, item: Owned<MenuItem>, index: usize) -> Retained<MenuItem> {
+    pub fn insert(&mut self, item: Id<MenuItem, Owned>, index: usize) -> Id<MenuItem, Shared> {
         let length = self.len();
         if index > length {
             panic!(
@@ -93,16 +90,16 @@ impl Menu {
         //     - Should maybe return a reference to the menu, where the reference is now bound to self?
         // - 0 <= index <= self.len()
         // TODO: Thread safety!
-        let _: () = unsafe { msg_send![self, insertItem: item.as_ptr() atIndex: index as NSInteger] };
+        let _: () = unsafe { msg_send![self, insertItem: &*item, atIndex: index as NSInteger] };
         // The item is now shared, so it's no longer safe to hold a mutable pointer to it
         item.into()
     }
 
     #[doc(alias = "addItem")]
     #[doc(alias = "addItem:")]
-    pub fn add(&mut self, item: Owned<MenuItem>) -> Retained<MenuItem> {
+    pub fn add(&mut self, item: Id<MenuItem, Owned>) -> Id<MenuItem, Shared> {
         // Same safety concerns as above
-        let _: () = unsafe { msg_send![self, addItem: item.as_ptr()] };
+        let _: () = unsafe { msg_send![self, addItem: &*item] };
         // The item is now shared, so it's no longer safe to hold a mutable pointer to it
         item.into()
     }

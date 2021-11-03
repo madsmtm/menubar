@@ -1,6 +1,6 @@
 use core::cell::UnsafeCell;
 use core::marker::PhantomData;
-use objc::rc::{AutoreleasePool, Owned, Retained};
+use objc::rc::{AutoreleasePool, Id, Owned, Shared};
 use objc::runtime::{Class, Object, BOOL, NO, YES};
 use objc::{class, msg_send, sel};
 
@@ -19,12 +19,8 @@ pub struct InitializedApplication {
     _priv: UnsafeCell<[u8; 0]>,
 }
 
-unsafe impl<'a> objc::Encode for &'a InitializedApplication {
-    const ENCODING: objc::Encoding<'static> = objc::Encoding::Object;
-}
-
-unsafe impl<'a> objc::Encode for &'a mut InitializedApplication {
-    const ENCODING: objc::Encoding<'static> = objc::Encoding::Object;
+unsafe impl objc::RefEncode for InitializedApplication {
+    const ENCODING_REF: objc::Encoding<'static> = objc::Encoding::Object;
 }
 
 unsafe impl objc::Message for InitializedApplication {}
@@ -51,9 +47,9 @@ impl InitializedApplication {
     /// that functionality here!
     #[doc(alias = "setMainMenu")]
     #[doc(alias = "setMainMenu:")]
-    pub fn set_menubar(&self, menubar: MenuBar) -> Retained<Menu> {
+    pub fn set_menubar(&self, menubar: MenuBar) -> Id<Menu, Shared> {
         let menu = menubar.into_raw();
-        let _: () = unsafe { msg_send![self, setMainMenu: menu.as_ptr()] };
+        let _: () = unsafe { msg_send![self, setMainMenu: &*menu] };
         menu.into()
     }
 
@@ -166,7 +162,7 @@ mod tests {
         unimplemented!()
     }
 
-    fn create_menu() -> Owned<Menu> {
+    fn create_menu() -> Id<Menu, Owned> {
         unimplemented!()
     }
 

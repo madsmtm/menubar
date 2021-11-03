@@ -1,11 +1,13 @@
 use core::mem;
 use core::{ffi, fmt, ptr};
-use objc::rc::{autoreleasepool, AutoreleasePool, Owned, Retained};
+use objc::rc::{autoreleasepool, AutoreleasePool, Id, Owned, Shared};
 use objc::runtime::{Object, BOOL, NO, YES};
 use objc::{class, msg_send, sel};
+use objc_foundation::{INSString, NSString};
+use std::ptr::NonNull;
 
 use super::menu::Menu;
-use super::util::{NSInteger, NSString};
+use super::util::NSInteger;
 
 struct Target; // Normal NSObject. Should return YES in worksWhenModal.
 struct ActionSelector; // objc::Sel - a method selector
@@ -26,12 +28,8 @@ pub struct MenuItem {
     _priv: [u8; 0],
 }
 
-unsafe impl<'a> objc::Encode for &'a MenuItem {
-    const ENCODING: objc::Encoding<'static> = objc::Encoding::Object;
-}
-
-unsafe impl<'a> objc::Encode for &'a mut MenuItem {
-    const ENCODING: objc::Encoding<'static> = objc::Encoding::Object;
+unsafe impl objc::RefEncode for MenuItem {
+    const ENCODING_REF: objc::Encoding<'static> = objc::Encoding::Object;
 }
 
 unsafe impl objc::Message for MenuItem {}
@@ -45,14 +43,14 @@ impl MenuItem {
     //     On-state image: Check mark
     //     Mixed-state image: Dash
 
-    fn alloc() -> Owned<Self> {
-        unsafe { Owned::new(msg_send![class!(NSMenuItem), alloc]) }
+    fn alloc() -> *mut Self {
+        unsafe { msg_send![class!(NSMenuItem), alloc] }
     }
 
     // Public only locally to allow for construction in Menubar
-    pub(super) fn new_empty() -> Owned<Self> {
-        let ptr = mem::ManuallyDrop::new(Self::alloc()).as_ptr();
-        unsafe { Owned::new(msg_send![ptr, init]) }
+    pub(super) fn new_empty() -> Id<Self, Owned> {
+        let ptr = Self::alloc();
+        unsafe { Id::new(msg_send![ptr, init]) }
     }
 
     #[doc(alias = "initWithTitle")]
@@ -60,35 +58,38 @@ impl MenuItem {
     pub fn new(
         title: &str,
         key_equivalent: &str,
-        action: Option<ptr::NonNull<ffi::c_void>>,
-    ) -> Owned<Self> {
+        action: Option<NonNull<ffi::c_void>>,
+    ) -> Id<Self, Owned> {
         let title = NSString::from_str(title);
         let key_equivalent = NSString::from_str(key_equivalent);
-        let ptr = mem::ManuallyDrop::new(Self::alloc()).as_ptr();
+        let action = if let Some(p) = action {
+            p.as_ptr()
+        } else {
+            ptr::null_mut()
+        };
+        let ptr = Self::alloc();
         unsafe {
-            Owned::new(msg_send![
+            Id::new(msg_send![
                 ptr,
-                initWithTitle: title
+                initWithTitle: &*title
                 action: action
-                keyEquivalent: key_equivalent
+                keyEquivalent: &*key_equivalent
             ])
         }
     }
 
-
     #[doc(alias = "separatorItem")]
-    pub fn new_separator() -> Owned<Self> {
-        let ptr: *const Self = unsafe { msg_send![class!(NSMenuItem), separatorItem] };
+    pub fn new_separator() -> Id<Self, Owned> {
+        let ptr: *mut Self = unsafe { msg_send![class!(NSMenuItem), separatorItem] };
         // TODO: Find an ergonomic API where we don't need to retain. Also,
         // this has a memory leak if there's no `autoreleasepool` to release
         // the returned pointer.
-        unsafe { Owned::from_retained(Retained::retain(ptr)) }
+        unsafe { Id::retain(NonNull::new_unchecked(ptr)) }
     }
 
     // fn new_separator<'p>(pool: &'p AutoreleasePool) -> &'p mut Self {
     //     unsafe { msg_send![class!(NSMenuItem), separatorItem] }
     // }
-
 
     // Enabling
 
@@ -150,14 +151,14 @@ impl MenuItem {
 
     pub fn title<'p>(&self, pool: &'p AutoreleasePool) -> &'p str {
         let title: &NSString = unsafe { msg_send![self, title] };
-        title.to_str(pool)
+        title.as_str(pool)
     }
 
     #[doc(alias = "setTitle")]
     #[doc(alias = "setTitle:")]
     pub fn set_title(&mut self, title: &str) {
         let title = NSString::from_str(title);
-        unsafe { msg_send![self, setTitle: title] }
+        unsafe { msg_send![self, setTitle: &*title] }
     }
 
     // #[doc(alias = "attributedTitle")]
@@ -247,10 +248,10 @@ impl MenuItem {
 
     #[doc(alias = "setSubmenu")]
     #[doc(alias = "setSubmenu:")]
-    pub fn set_submenu(&mut self, menu: Option<Owned<Menu>>) -> Option<Retained<Menu>> {
+    pub fn set_submenu(&mut self, mut menu: Option<Id<Menu, Owned>>) -> Option<Id<Menu, Shared>> {
         // The submenu must not already have a parent!
-        let ptr: *mut Menu = match menu {
-            Some(ref menu) => menu.as_ptr(),
+        let ptr = match menu {
+            Some(ref mut menu) => &mut **menu as *mut Menu,
             None => ptr::null_mut(),
         };
         let _: () = unsafe { msg_send![self, setSubmenu: ptr] };
