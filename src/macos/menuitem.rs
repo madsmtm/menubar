@@ -1,7 +1,7 @@
 use core::mem;
 use core::{ffi, fmt, ptr};
 use objc::rc::{autoreleasepool, AutoreleasePool, Id, Owned, Shared};
-use objc::runtime::{Object, BOOL, NO, YES};
+use objc::runtime::{Bool, Object};
 use objc::{class, msg_send, sel};
 use objc_foundation::{INSString, NSString};
 use std::ptr::NonNull;
@@ -109,14 +109,14 @@ impl MenuItem {
     ///
     /// If hidden, it does not appear in a menu and does not participate in command key matching.
     pub fn hidden(&self) -> bool {
-        let hidden: BOOL = unsafe { msg_send![self, isHidden] };
-        hidden != NO
+        let hidden: Bool = unsafe { msg_send![self, isHidden] };
+        hidden.is_true()
     }
 
     #[doc(alias = "setHidden")]
     #[doc(alias = "setHidden:")]
     pub fn set_hidden(&mut self, hidden: bool) {
-        let hidden: BOOL = if hidden { YES } else { NO };
+        let hidden = Bool::new(hidden);
         unsafe { msg_send![self, setHidden: hidden] }
     }
 
@@ -272,8 +272,8 @@ impl MenuItem {
     #[doc(alias = "isSeparatorItem")]
     pub fn separator(&self) -> bool {
         // TODO: Maybe call this is_separator?
-        let is_separator: BOOL = unsafe { msg_send![self, isSeparatorItem] };
-        is_separator != NO
+        let is_separator: Bool = unsafe { msg_send![self, isSeparatorItem] };
+        is_separator.is_true()
     }
 
     // Owning menu

@@ -1,7 +1,7 @@
 use core::cell::UnsafeCell;
 use core::marker::PhantomData;
 use objc::rc::{AutoreleasePool, Id, Owned, Shared};
-use objc::runtime::{Class, Object, BOOL, NO, YES};
+use objc::runtime::{Class, Object, Bool};
 use objc::{class, msg_send, sel};
 
 use super::menu::Menu;
@@ -130,8 +130,8 @@ impl InitializedApplication {
 
     #[doc(alias = "menuBarVisible")]
     pub fn menubar_visible(&self) -> bool {
-        let visible: BOOL = unsafe { msg_send![class!(NSMenu), menuBarVisible] };
-        visible != NO
+        let visible: Bool = unsafe { msg_send![class!(NSMenu), menuBarVisible] };
+        visible.is_true()
     }
 
     /// Hide or show the menubar for the entire application.
@@ -141,7 +141,7 @@ impl InitializedApplication {
     #[doc(alias = "setMenuBarVisible")]
     #[doc(alias = "setMenuBarVisible:")]
     pub fn set_menubar_visible(&self, visible: bool) {
-        let visible: BOOL = if visible { YES } else { NO };
+        let visible = Bool::new(visible);
         unsafe { msg_send![class!(NSMenu), setMenuBarVisible: visible] }
     }
 
