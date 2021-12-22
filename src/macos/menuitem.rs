@@ -1,5 +1,6 @@
 use core::mem;
 use core::{ffi, fmt, ptr};
+use objc::ffi::NSInteger;
 use objc::rc::{autoreleasepool, AutoreleasePool, Id, Owned, Shared};
 use objc::runtime::{Bool, Object};
 use objc::{class, msg_send, sel};
@@ -7,7 +8,6 @@ use objc_foundation::{INSString, NSString};
 use std::ptr::NonNull;
 
 use super::menu::Menu;
-use super::util::NSInteger;
 
 struct Target; // Normal NSObject. Should return YES in worksWhenModal.
 struct ActionSelector; // objc::Sel - a method selector
@@ -71,9 +71,9 @@ impl MenuItem {
         unsafe {
             Id::new(msg_send![
                 ptr,
-                initWithTitle: &*title
-                action: action
-                keyEquivalent: &*key_equivalent
+                initWithTitle: &*title,
+                action: action,
+                keyEquivalent: &*key_equivalent,
             ])
         }
     }

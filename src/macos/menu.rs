@@ -1,13 +1,13 @@
 use core::fmt;
 use core::marker::PhantomData;
 use core::mem;
+use objc::ffi::{NSInteger, NSUInteger};
 use objc::rc::{autoreleasepool, AutoreleasePool, Id, Owned, Shared};
 use objc::runtime::Object;
 use objc::{class, msg_send, sel};
 use objc_foundation::{INSString, NSString};
 
 use super::menuitem::MenuItem;
-use super::util::{NSInteger, NSUInteger};
 
 struct MenuDelegate;
 
@@ -417,7 +417,7 @@ impl<'p> Iterator for Iter<'p> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         let length: NSUInteger = unsafe { msg_send![self.array, count] };
-        (length as usize, Some(length as usize))
+        (length as usize, Some(length))
     }
 }
 

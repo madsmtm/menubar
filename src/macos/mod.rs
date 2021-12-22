@@ -2,7 +2,6 @@ mod global;
 mod menu;
 mod menubar;
 mod menuitem;
-pub mod util; // TMP pub
 
 pub use self::menubar::MenuBar;
 pub use global::InitializedApplication;
