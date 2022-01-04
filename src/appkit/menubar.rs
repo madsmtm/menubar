@@ -1,7 +1,7 @@
 use super::menu::NSMenu;
 use super::menuitem::NSMenuItem;
-use objc::rc::{Id, Owned, Shared};
-use objc::{class, msg_send, sel};
+use objc2::rc::{Id, Owned, Shared};
+use objc2::{class, msg_send, sel};
 
 /// Helper to make constructing the menu bar easier
 #[derive(Debug)]

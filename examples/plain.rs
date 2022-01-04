@@ -1,6 +1,6 @@
 #[cfg(target_os = "macos")]
 use menubar::appkit::{NSMenu, NSMenuItem};
-use objc::rc::autoreleasepool;
+use objc2::rc::autoreleasepool;
 
 fn main() {
     autoreleasepool(|_| {

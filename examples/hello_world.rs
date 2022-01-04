@@ -5,7 +5,7 @@ use env_logger;
 #[cfg(target_os = "macos")]
 use menubar::appkit::{InitializedApplication, MenuBar, MenuItemState, NSMenu, NSMenuItem};
 #[cfg(target_os = "macos")]
-use objc::{
+use objc2::{
     class, msg_send,
     rc::{autoreleasepool, Owned},
     sel,

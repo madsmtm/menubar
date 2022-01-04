@@ -1,11 +1,12 @@
 use core::fmt;
 use core::marker::PhantomData;
 use core::mem;
-use objc::ffi::{NSInteger, NSUInteger};
-use objc::rc::{autoreleasepool, AutoreleasePool, Id, Owned, Shared};
-use objc::runtime::Object;
-use objc::{class, msg_send, sel};
-use objc_foundation::{INSString, NSString};
+use objc2::ffi::{NSInteger, NSUInteger};
+use objc2::rc::{autoreleasepool, AutoreleasePool, Id, Owned, Shared};
+use objc2::runtime::Object;
+use objc2::{class, msg_send, sel};
+use objc2::{Encoding, Message, RefEncode};
+use objc2_foundation::{INSString, NSString};
 
 use super::menuitem::NSMenuItem;
 
@@ -22,11 +23,11 @@ pub struct NSMenu {
     _priv: [u8; 0],
 }
 
-unsafe impl objc::RefEncode for NSMenu {
-    const ENCODING_REF: objc::Encoding<'static> = objc::Encoding::Object;
+unsafe impl RefEncode for NSMenu {
+    const ENCODING_REF: Encoding<'static> = Encoding::Object;
 }
 
-unsafe impl objc::Message for NSMenu {}
+unsafe impl Message for NSMenu {}
 
 unsafe impl Send for NSMenu {}
 unsafe impl Sync for NSMenu {}

@@ -1,8 +1,9 @@
 use core::cell::UnsafeCell;
 use core::marker::PhantomData;
-use objc::rc::{AutoreleasePool, Id, Owned, Shared};
-use objc::runtime::{Bool, Class, Object};
-use objc::{class, msg_send, sel};
+use objc2::rc::{AutoreleasePool, Id, Owned, Shared};
+use objc2::runtime::{Bool, Class, Object};
+use objc2::{class, msg_send, sel};
+use objc2::{Encoding, Message, RefEncode};
 
 use super::menu::NSMenu;
 use super::menubar::MenuBar;
@@ -19,11 +20,11 @@ pub struct InitializedApplication {
     _priv: UnsafeCell<[u8; 0]>,
 }
 
-unsafe impl objc::RefEncode for InitializedApplication {
-    const ENCODING_REF: objc::Encoding<'static> = objc::Encoding::Object;
+unsafe impl RefEncode for InitializedApplication {
+    const ENCODING_REF: Encoding<'static> = Encoding::Object;
 }
 
-unsafe impl objc::Message for InitializedApplication {}
+unsafe impl Message for InitializedApplication {}
 unsafe impl Sync for InitializedApplication {}
 
 impl InitializedApplication {
@@ -155,8 +156,9 @@ impl InitializedApplication {
 
 #[cfg(test)]
 mod tests {
+    use objc2::rc::autoreleasepool;
+
     use super::*;
-    use objc::rc::autoreleasepool;
 
     fn init_app() -> &'static InitializedApplication {
         unimplemented!()
