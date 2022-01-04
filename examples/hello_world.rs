@@ -3,7 +3,7 @@
 
 use env_logger;
 #[cfg(target_os = "macos")]
-use menubar::macos::{InitializedApplication, MenuBar, MenuItemState, NSMenu, NSMenuItem};
+use menubar::appkit::{InitializedApplication, MenuBar, MenuItemState, NSMenu, NSMenuItem};
 #[cfg(target_os = "macos")]
 use objc::{
     class, msg_send,

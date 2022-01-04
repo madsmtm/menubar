@@ -1,5 +1,5 @@
 #![allow(unused_imports)] // While testing
-use menubar::macos::{MenuBar, NSMenu, NSMenuItem};
+use menubar::appkit::{MenuBar, NSMenu, NSMenuItem};
 
 fn main() {
     // Dynamic content

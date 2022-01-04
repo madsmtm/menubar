@@ -1,5 +1,5 @@
 #[cfg(target_os = "macos")]
-use menubar::macos::{NSMenu, NSMenuItem};
+use menubar::appkit::{NSMenu, NSMenuItem};
 use objc::rc::autoreleasepool;
 
 fn main() {

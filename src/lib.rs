@@ -8,7 +8,7 @@
 #![allow(unused_imports)]
 
 #[cfg(target_os = "macos")]
-pub mod macos;
+pub mod appkit;
 
 // TODO: Remove this when objc gets a new release
 #[cfg(target_os = "macos")]
