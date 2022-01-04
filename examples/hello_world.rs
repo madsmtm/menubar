@@ -3,7 +3,7 @@
 
 use env_logger;
 #[cfg(target_os = "macos")]
-use menubar::macos::{InitializedApplication, Menu, MenuBar, MenuItem, MenuItemState};
+use menubar::macos::{InitializedApplication, MenuBar, MenuItemState, NSMenu, NSMenuItem};
 #[cfg(target_os = "macos")]
 use objc::{
     class, msg_send,
@@ -40,20 +40,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut services_menu = None;
 
         let mut menubar = MenuBar::new(|menu| {
-            menu.add(MenuItem::new("item 1", "a", None));
-            menu.add(MenuItem::new_separator());
+            menu.add(NSMenuItem::new("item 1", "a", None));
+            menu.add(NSMenuItem::new_separator());
             menu.add({
-                let mut item = MenuItem::new("Services", "", None);
+                let mut item = NSMenuItem::new("Services", "", None);
                 services_menu = item.set_submenu({
-                    let mut submenu = Menu::new();
-                    submenu.add(MenuItem::new("will get removed or disappear?", "", None));
+                    let mut submenu = NSMenu::new();
+                    submenu.add(NSMenuItem::new("will get removed or disappear?", "", None));
                     Some(submenu)
                 });
                 item
             });
-            menu.add(MenuItem::new_separator());
+            menu.add(NSMenuItem::new_separator());
             // let mut item = unsafe {
-            //     MenuItem::from_raw(msg_send![class!(NSMenuItem), separatorItem])
+            //     NSMenuItem::from_raw(msg_send![class!(NSNSMenuItem), separatorItem])
             // };
             // unsafe {
             //     let _: () = msg_send![menu.as_raw(), setAutoenablesItems: 0];
@@ -65,23 +65,23 @@ fn main() -> Result<(), Box<dyn Error>> {
             // item.set_title("xyz");
             // item.set_hidden(true);
             // item.set_submenu({
-            //     let mut submenu = Menu::new();
-            //     submenu.add(MenuItem::new("submenu item", "d", None));
+            //     let mut submenu = NSMenu::new();
+            //     submenu.add(NSMenuItem::new("submenu item", "d", None));
             //     Some(submenu)
             // });
             // menu.add(item);
-            // let item = MenuItem::new("item 2", "b", None);
+            // let item = NSMenuItem::new("item 2", "b", None);
             // unsafe {
             //     let _: () = msg_send![item.as_raw(), setEnabled: 1];
             // }
             // menu.add(item);
             menu.add({
                 // Unsure how key equivalents affect submenuitems???
-                let mut item = MenuItem::new("item w. submenu", "c", None);
+                let mut item = NSMenuItem::new("item w. submenu", "c", None);
                 item.set_submenu({
-                    let mut submenu = Menu::new();
-                    submenu.add(MenuItem::new("submenu item 1 🤖", "d", None));
-                    submenu.add(MenuItem::new("submenu item 2", "e", None));
+                    let mut submenu = NSMenu::new();
+                    submenu.add(NSMenuItem::new("submenu item 1 🤖", "d", None));
+                    submenu.add(NSMenuItem::new("submenu item 2", "e", None));
                     Some(submenu)
                 });
                 assert_eq!(item.state(), MenuItemState::Off);
@@ -93,7 +93,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 assert_eq!(item.state(), MenuItemState::Off);
                 item
             });
-            let mut item = MenuItem::new("item x", "f", None);
+            let mut item = NSMenuItem::new("item x", "f", None);
             autoreleasepool(|pool| {
                 assert_eq!(item.title(pool), "item x");
                 item.set_title("item 4");
@@ -103,56 +103,56 @@ fn main() -> Result<(), Box<dyn Error>> {
         });
 
         menubar.add("menu hidden", |menu| {
-            let item = MenuItem::new("item 1", "g", None);
+            let item = NSMenuItem::new("item 1", "g", None);
             assert!(!item.hidden());
             menu.add(item);
-            let mut item = MenuItem::new("item 2", "h", None);
+            let mut item = NSMenuItem::new("item 2", "h", None);
             assert!(!item.hidden());
             item.set_hidden(true);
             assert!(item.hidden());
             item.set_hidden(false);
             assert!(!item.hidden());
             menu.add(item);
-            let mut item = MenuItem::new("item 3", "i", None);
+            let mut item = NSMenuItem::new("item 3", "i", None);
             item.set_hidden(true);
             menu.add(item);
         });
 
         let window_menu = menubar.add("Window menu", |menu| {
-            menu.add(MenuItem::new("Will be above the window data", "", None));
+            menu.add(NSMenuItem::new("Will be above the window data", "", None));
         });
 
         menubar.add("Duplicate key equvalent", |menu| {
-            menu.add(MenuItem::new("item 1", "j", None));
-            menu.add(MenuItem::new("item 2", "j", None));
+            menu.add(NSMenuItem::new("item 1", "j", None));
+            menu.add(NSMenuItem::new("item 2", "j", None));
         });
 
         menubar.add("Submenus gallore", |menu| {
             menu.add({
-                let mut item = MenuItem::new("Item 1", "", None);
+                let mut item = NSMenuItem::new("Item 1", "", None);
                 item.set_submenu({
-                    let mut submenu = Menu::new();
-                    submenu.add(MenuItem::new("Item 1 : 1", "", None));
-                    submenu.add(MenuItem::new("Item 1 : 2", "", None));
+                    let mut submenu = NSMenu::new();
+                    submenu.add(NSMenuItem::new("Item 1 : 1", "", None));
+                    submenu.add(NSMenuItem::new("Item 1 : 2", "", None));
                     submenu.add({
-                        let mut submenuitem = MenuItem::new("Item 1 : 3", "", None);
+                        let mut submenuitem = NSMenuItem::new("Item 1 : 3", "", None);
                         submenuitem.set_submenu({
-                            let mut submenu2 = Menu::new();
-                            submenu2.add(MenuItem::new("Item 1 : 3 : 1", "", None));
+                            let mut submenu2 = NSMenu::new();
+                            submenu2.add(NSMenuItem::new("Item 1 : 3 : 1", "", None));
                             submenu2.add({
-                                let mut submenuitem2 = MenuItem::new("Item 1 : 3 : 2", "", None);
+                                let mut submenuitem2 = NSMenuItem::new("Item 1 : 3 : 2", "", None);
                                 submenuitem2.set_submenu({
-                                    let mut submenu3 = Menu::new();
+                                    let mut submenu3 = NSMenu::new();
                                     let mut submenuitem3 =
-                                        MenuItem::new("Item 1 : 3 : 2 : 1", "", None);
+                                        NSMenuItem::new("Item 1 : 3 : 2 : 1", "", None);
                                     submenuitem3.set_state(MenuItemState::On);
                                     submenu3.add(submenuitem3);
-                                    submenu3.add(MenuItem::new("Item 1 : 3 : 2 : 2", "k", None));
+                                    submenu3.add(NSMenuItem::new("Item 1 : 3 : 2 : 2", "k", None));
                                     Some(submenu3)
                                 });
                                 submenuitem2
                             });
-                            submenu2.add(MenuItem::new("Item 1 : 3 : 3", "", None));
+                            submenu2.add(NSMenuItem::new("Item 1 : 3 : 3", "", None));
                             Some(submenu2)
                         });
                         submenuitem.set_state(MenuItemState::Mixed);
@@ -164,11 +164,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 item
             });
             menu.add({
-                let mut item = MenuItem::new("Item 2", "", None);
+                let mut item = NSMenuItem::new("Item 2", "", None);
                 item.set_submenu({
-                    let mut submenu = Menu::new();
-                    submenu.add(MenuItem::new("Item 2 : 1", "", None));
-                    submenu.add(MenuItem::new("Item 2 : 2", "", None));
+                    let mut submenu = NSMenu::new();
+                    submenu.add(NSMenuItem::new("Item 2 : 1", "", None));
+                    submenu.add(NSMenuItem::new("Item 2 : 2", "", None));
                     Some(submenu)
                 });
                 item
@@ -178,33 +178,37 @@ fn main() -> Result<(), Box<dyn Error>> {
         menubar.add("Empty menu", |_| {});
 
         menubar.add("Menu with a really loooooooooooong name!", |menu| {
-            menu.add(MenuItem::new("Item with a really loooooooooooong name!", "", None));
-            menu.add(MenuItem::new("Item with an even looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonger name!", "", None));
-            menu.add(MenuItem::new("Item with the looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooongest name!", "", None));
+            menu.add(NSMenuItem::new("Item with a really loooooooooooong name!", "", None));
+            menu.add(NSMenuItem::new("Item with an even looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooonger name!", "", None));
+            menu.add(NSMenuItem::new("Item with the looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooongest name!", "", None));
         });
 
         menubar.add("This menu text is truncated on smaller screens since there's too many long menus already!", |menu| {
-            menu.add(MenuItem::new("item", "", None));
+            menu.add(NSMenuItem::new("item", "", None));
         });
 
         menubar.add("Length tests", |menu| {
             assert_eq!(menu.len(), 0);
-            menu.add(MenuItem::new("item", "", None));
+            menu.add(NSMenuItem::new("item", "", None));
             assert_eq!(menu.len(), 1);
             menu.remove_all();
             assert_eq!(menu.len(), 0);
         });
 
         let help_menu = menubar.add("Help menu", |menu| {
-            menu.add(MenuItem::new("Will be below the help search box", "", None));
+            menu.add(NSMenuItem::new(
+                "Will be below the help search box",
+                "",
+                None,
+            ));
         });
 
         menubar.add("Insert tests", |menu| {
-            menu.add(MenuItem::new("item 4", "", None));
-            menu.insert(MenuItem::new("item 3", "", None), 0);
-            menu.insert(MenuItem::new("item 1", "", None), 0);
-            menu.insert(MenuItem::new("item 2", "", None), 1);
-            menu.insert(MenuItem::new("item 5", "", None), 4);
+            menu.add(NSMenuItem::new("item 4", "", None));
+            menu.insert(NSMenuItem::new("item 3", "", None), 0);
+            menu.insert(NSMenuItem::new("item 1", "", None), 0);
+            menu.insert(NSMenuItem::new("item 2", "", None), 1);
+            menu.insert(NSMenuItem::new("item 5", "", None), 4);
         });
 
         // Debug print before we add a bunch of items
@@ -213,7 +217,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         menubar.add("A lot of items", |menu| {
             const COUNT: usize = 65535;
             for i in 1..=COUNT {
-                menu.add(MenuItem::new(&format!("item {}", i), "", None));
+                menu.add(NSMenuItem::new(&format!("item {}", i), "", None));
             }
             assert_eq!(menu.len(), COUNT);
         });
@@ -233,7 +237,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // {
     //     use cocoa::appkit::{
     //         NSApp, NSApplication, NSApplicationActivationPolicyRegular, NSEventModifierFlags,
-    //         NSMenu, NSMenuItem,
+    //         NSMenu, NSNSMenuItem,
     //     };
     //     use cocoa::base::nil;
     //     use cocoa::foundation::NSAutoreleasePool;
@@ -245,7 +249,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     //     let pool = unsafe { NSAutoreleasePool::new(nil) };
 
-    //     // let menubar = NSMenu::new(nil).autorelease();
+    //     // let menubar = NSNSMenu::new(nil).autorelease();
 
     //     // app.setMainMenu_(menubar);
 

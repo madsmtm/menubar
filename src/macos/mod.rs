@@ -5,8 +5,8 @@ mod menuitem;
 
 pub use self::menubar::MenuBar;
 pub use global::InitializedApplication;
-pub use menu::Menu;
-pub use menuitem::{MenuItem, MenuItemState};
+pub use menu::NSMenu;
+pub use menuitem::{MenuItemState, NSMenuItem};
 
 // We need the Objectice-C symbols like NSString, NSMenu and so on to be available
 #[link(name = "AppKit", kind = "framework")]

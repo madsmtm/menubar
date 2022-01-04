@@ -1,5 +1,5 @@
 #![allow(unused_imports)] // While testing
-use menubar::macos::{Menu, MenuBar, MenuItem};
+use menubar::macos::{MenuBar, NSMenu, NSMenuItem};
 
 fn main() {
     // Dynamic content
@@ -8,23 +8,23 @@ fn main() {
 
     let mut menu_bar = MenuBar::new(|_menu| {});
     menu_bar.add("File", |menu| {
-        menu.add(MenuItem::new("New File", "CMD+N", None));
-        menu.add(MenuItem::new("Open...", "CMD+O", None));
+        menu.add(NSMenuItem::new("New File", "CMD+N", None));
+        menu.add(NSMenuItem::new("Open...", "CMD+O", None));
         // // Has dynamic content
-        // let open_recent_menu = Menu::new();
+        // let open_recent_menu = NSMenu::new();
         // open_recent_menu.on_open(|menu| {
         //     menu.remove_all();
-        //     menu.add_item(MenuItem::new("Reopen Closed File", "SHIFT+CMD+T", None));
+        //     menu.add_item(NSMenuItem::new("Reopen Closed File", "SHIFT+CMD+T", None));
         //     menu.add_separator();
         //     recent_projects.iter().for_each(|p| {
-        //         menu.add_item(MenuItem::new(p, "", None));
+        //         menu.add_item(NSMenuItem::new(p, "", None));
         //     });
         //     menu.add_separator();
         //     recent_files.iter().for_each(|p| {
-        //         menu.add_item(MenuItem::new(p, "", None));
+        //         menu.add_item(NSMenuItem::new(p, "", None));
         //     });
         //     menu.add_separator();
-        //     menu.add_item(MenuItem::new("Clear items", "", None));
+        //     menu.add_item(NSMenuItem::new("Clear items", "", None));
         // });
         // menu.add_submenu("Open Recent", open_recent_menu);
     });

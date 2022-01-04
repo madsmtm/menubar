@@ -7,7 +7,7 @@ use objc::{class, msg_send, sel};
 use objc_foundation::{INSString, NSString};
 use std::ptr::NonNull;
 
-use super::menu::Menu;
+use super::menu::NSMenu;
 
 struct Target; // Normal NSObject. Should return YES in worksWhenModal.
 struct ActionSelector; // objc::Sel - a method selector
@@ -22,22 +22,21 @@ pub enum MenuItemState {
     Off,
 }
 
-#[doc(alias = "NSMenuItem")]
 #[repr(C)]
-pub struct MenuItem {
+pub struct NSMenuItem {
     _priv: [u8; 0],
 }
 
-unsafe impl objc::RefEncode for MenuItem {
+unsafe impl objc::RefEncode for NSMenuItem {
     const ENCODING_REF: objc::Encoding<'static> = objc::Encoding::Object;
 }
 
-unsafe impl objc::Message for MenuItem {}
+unsafe impl objc::Message for NSMenuItem {}
 
-unsafe impl Send for MenuItem {}
-unsafe impl Sync for MenuItem {}
+unsafe impl Send for NSMenuItem {}
+unsafe impl Sync for NSMenuItem {}
 
-impl MenuItem {
+impl NSMenuItem {
     // Defaults:
     //     State: NSOffState
     //     On-state image: Check mark
@@ -242,16 +241,19 @@ impl MenuItem {
 
     // Submenus
 
-    pub fn submenu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p Menu> {
+    pub fn submenu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p NSMenu> {
         unsafe { msg_send![self, submenu] }
     }
 
     #[doc(alias = "setSubmenu")]
     #[doc(alias = "setSubmenu:")]
-    pub fn set_submenu(&mut self, mut menu: Option<Id<Menu, Owned>>) -> Option<Id<Menu, Shared>> {
+    pub fn set_submenu(
+        &mut self,
+        mut menu: Option<Id<NSMenu, Owned>>,
+    ) -> Option<Id<NSMenu, Shared>> {
         // The submenu must not already have a parent!
         let ptr = match menu {
-            Some(ref mut menu) => &mut **menu as *mut Menu,
+            Some(ref mut menu) => &mut **menu as *mut NSMenu,
             None => ptr::null_mut(),
         };
         let _: () = unsafe { msg_send![self, setSubmenu: ptr] };
@@ -265,7 +267,7 @@ impl MenuItem {
 
     /// The parent submenu's menuitem
     #[doc(alias = "parentItem")]
-    fn parent_item<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p MenuItem> {
+    fn parent_item<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p NSMenuItem> {
         unimplemented!()
     }
 
@@ -279,13 +281,13 @@ impl MenuItem {
     // Owning menu
 
     #[doc(alias = "menu")]
-    fn parent_menu<'p>(&self, pool: &'p AutoreleasePool) -> &'p Menu {
+    fn parent_menu<'p>(&self, pool: &'p AutoreleasePool) -> &'p NSMenu {
         unimplemented!()
     }
 
     #[doc(alias = "setMenu")]
     #[doc(alias = "setMenu:")]
-    fn set_parent_menu(&mut self, menu: &mut Menu) {
+    fn set_parent_menu(&mut self, menu: &mut NSMenu) {
         unimplemented!()
     }
 
@@ -361,28 +363,28 @@ impl MenuItem {
 
     /// Get whether the menu should be drawn highlighted
     ///
-    /// You should probably use the [`Menu`] delegate method "willHighlightItem"
+    /// You should probably use the [`NSMenu`] delegate method "willHighlightItem"
     #[doc(alias = "isHighlighted")]
     fn highlighted(&self) -> bool {
         unimplemented!()
     }
 
-    // Protocols: Same as Menu + "NSValidatedUserInterfaceItem"
+    // Protocols: Same as NSMenu + "NSValidatedUserInterfaceItem"
     // This will have to be researched, is the way for the system to
     // automatically enable and disable items based on context
 }
 
-impl PartialEq for MenuItem {
+impl PartialEq for NSMenuItem {
     /// Pointer equality
     fn eq(&self, other: &Self) -> bool {
         self as *const Self == other as *const Self
     }
 }
 
-impl fmt::Debug for MenuItem {
+impl fmt::Debug for NSMenuItem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         autoreleasepool(|pool| {
-            f.debug_struct("MenuItem")
+            f.debug_struct("NSMenuItem")
                 .field("id", &(self as *const Self))
                 .field("separator", &self.separator())
                 .field("title", &self.title(pool))
@@ -400,10 +402,10 @@ mod tests {
     use super::*;
     use crate::test_util::STRINGS;
 
-    fn for_each_item(_pool: &AutoreleasePool, mut f: impl FnMut(&mut MenuItem)) {
-        f(&mut *MenuItem::new_separator());
-        f(&mut *MenuItem::new_empty());
-        f(&mut *MenuItem::new("", "", None));
+    fn for_each_item(_pool: &AutoreleasePool, mut f: impl FnMut(&mut NSMenuItem)) {
+        f(&mut *NSMenuItem::new_separator());
+        f(&mut *NSMenuItem::new_empty());
+        f(&mut *NSMenuItem::new("", "", None));
     }
 
     #[test]
@@ -435,7 +437,7 @@ mod tests {
     fn test_title_init() {
         autoreleasepool(|pool| {
             STRINGS.iter().for_each(|&title| {
-                let item = MenuItem::new(title, "", None);
+                let item = NSMenuItem::new(title, "", None);
                 assert_eq!(item.title(pool), title);
             });
         });
@@ -444,9 +446,9 @@ mod tests {
     #[test]
     fn test_title_default() {
         autoreleasepool(|pool| {
-            let item = MenuItem::new_empty();
+            let item = NSMenuItem::new_empty();
             assert_eq!(item.title(pool), "NSMenuItem");
-            let item = MenuItem::new_separator();
+            let item = NSMenuItem::new_separator();
             assert_eq!(item.title(pool), "");
         });
     }
@@ -454,11 +456,11 @@ mod tests {
     #[test]
     fn test_separator() {
         autoreleasepool(|_| {
-            let item = MenuItem::new_separator();
+            let item = NSMenuItem::new_separator();
             assert!(item.separator());
-            let item = MenuItem::new_empty();
+            let item = NSMenuItem::new_empty();
             assert!(!item.separator());
-            let item = MenuItem::new("", "", None);
+            let item = NSMenuItem::new("", "", None);
             assert!(!item.separator());
         });
     }
@@ -483,7 +485,7 @@ mod tests {
         autoreleasepool(|pool| {
             for_each_item(pool, |item| {
                 assert!(item.submenu(pool).is_none());
-                let menu = Menu::new();
+                let menu = NSMenu::new();
                 let menu = item.set_submenu(Some(menu));
                 assert_eq!(item.submenu(pool), menu.as_deref());
                 item.set_submenu(None);

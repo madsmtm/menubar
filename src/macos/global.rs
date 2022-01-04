@@ -1,10 +1,10 @@
 use core::cell::UnsafeCell;
 use core::marker::PhantomData;
 use objc::rc::{AutoreleasePool, Id, Owned, Shared};
-use objc::runtime::{Class, Object, Bool};
+use objc::runtime::{Bool, Class, Object};
 use objc::{class, msg_send, sel};
 
-use super::menu::Menu;
+use super::menu::NSMenu;
 use super::menubar::MenuBar;
 
 /// Helper to make various functions on the global application object safe.
@@ -39,7 +39,7 @@ impl InitializedApplication {
     }
 
     #[doc(alias = "mainMenu")]
-    pub fn menubar<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p Menu> {
+    pub fn menubar<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p NSMenu> {
         unsafe { msg_send![self, mainMenu] }
     }
 
@@ -47,7 +47,7 @@ impl InitializedApplication {
     /// that functionality here!
     #[doc(alias = "setMainMenu")]
     #[doc(alias = "setMainMenu:")]
-    pub fn set_menubar(&self, menubar: MenuBar) -> Id<Menu, Shared> {
+    pub fn set_menubar(&self, menubar: MenuBar) -> Id<NSMenu, Shared> {
         let menu = menubar.into_raw();
         let _: () = unsafe { msg_send![self, setMainMenu: &*menu] };
         menu.into()
@@ -55,7 +55,7 @@ impl InitializedApplication {
 
     /// Returns the first menu set with [`set_window_menu`]
     #[doc(alias = "windowsMenu")]
-    pub fn window_menu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p Menu> {
+    pub fn window_menu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p NSMenu> {
         unsafe { msg_send![self, windowsMenu] }
     }
 
@@ -75,14 +75,14 @@ impl InitializedApplication {
     /// though this is not recommended.
     #[doc(alias = "setWindowsMenu")]
     #[doc(alias = "setWindowsMenu:")]
-    pub fn set_window_menu(&self, menu: &Menu) {
+    pub fn set_window_menu(&self, menu: &NSMenu) {
         // TODO: Is it safe to immutably set this?
         unsafe { msg_send![self, setWindowsMenu: menu] }
     }
 
     /// Returns the first menu set with [`set_services_menu`]
     #[doc(alias = "servicesMenu")]
-    pub fn services_menu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p Menu> {
+    pub fn services_menu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p NSMenu> {
         unsafe { msg_send![self, servicesMenu] }
     }
 
@@ -98,7 +98,7 @@ impl InitializedApplication {
     /// more than once, but this is really flaky.
     #[doc(alias = "setServicesMenu")]
     #[doc(alias = "setServicesMenu:")]
-    pub fn set_services_menu(&self, menu: &Menu) {
+    pub fn set_services_menu(&self, menu: &NSMenu) {
         // TODO: Is it safe to immutably set this?
         // TODO: The menu should (must?) not contain any items!
         // TODO: Setting this and pressing the close button doesn't work in winit
@@ -109,7 +109,7 @@ impl InitializedApplication {
 
     /// Get the menu that is currently assigned as the help menu, or `None` if the system is configured to autodetect this.
     #[doc(alias = "helpMenu")]
-    pub fn help_menu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p Menu> {
+    pub fn help_menu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p NSMenu> {
         unsafe { msg_send![self, helpMenu] }
     }
 
@@ -121,7 +121,7 @@ impl InitializedApplication {
     /// To prevent this, specify a menu that does not appear anywhere.
     #[doc(alias = "setHelpMenu")]
     #[doc(alias = "setHelpMenu:")]
-    pub fn set_help_menu(&self, menu: Option<&Menu>) {
+    pub fn set_help_menu(&self, menu: Option<&NSMenu>) {
         // TODO: Is it safe to immutably set this?
         unsafe { msg_send![self, setHelpMenu: menu] }
     }
@@ -162,7 +162,7 @@ mod tests {
         unimplemented!()
     }
 
-    fn create_menu() -> Id<Menu, Owned> {
+    fn create_menu() -> Id<NSMenu, Owned> {
         unimplemented!()
     }
 
