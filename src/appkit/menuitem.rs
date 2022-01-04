@@ -377,8 +377,9 @@ impl NSMenuItem {
 
 impl PartialEq for NSMenuItem {
     /// Pointer equality
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
-        self as *const Self == other as *const Self
+        core::ptr::eq(self, other)
     }
 }
 

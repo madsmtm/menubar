@@ -55,7 +55,7 @@ impl NSMenu {
     // Title (only useful for MenuBar!)
 
     pub(super) fn title<'p>(&self, pool: &'p AutoreleasePool) -> &'p str {
-        let title: &NSString = unsafe { msg_send![self, title] };
+        let title: &'p NSString = unsafe { msg_send![self, title] };
         title.as_str(pool)
     }
 
@@ -152,6 +152,11 @@ impl NSMenu {
     pub fn len(&self) -> usize {
         let number_of_items: NSInteger = unsafe { msg_send![self, numberOfItems] };
         number_of_items as usize
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     #[doc(alias = "itemArray")]
@@ -377,8 +382,9 @@ impl NSMenu {
 
 impl PartialEq for NSMenu {
     /// Pointer equality
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
-        self as *const Self == other as *const Self
+        core::ptr::eq(self, other)
     }
 }
 

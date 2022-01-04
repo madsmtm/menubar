@@ -12,7 +12,7 @@ impl MenuBar {
         self.0
     }
 
-    pub fn new(f: impl FnOnce(&mut NSMenu) -> ()) -> Self {
+    pub fn new(f: impl FnOnce(&mut NSMenu)) -> Self {
         // The root menu title is irrelevant
         let menu = NSMenu::new();
         let mut menubar = Self(menu);
@@ -24,7 +24,7 @@ impl MenuBar {
         menubar
     }
 
-    fn add_menu<'a>(&'a mut self, menu: Id<NSMenu, Owned>) -> Id<NSMenu, Shared> {
+    fn add_menu(&mut self, menu: Id<NSMenu, Owned>) -> Id<NSMenu, Shared> {
         // All parameters on menu items irrelevant in the menu bar
         let mut item = NSMenuItem::new_empty();
         let menu = item.set_submenu(Some(menu)).unwrap();
@@ -32,11 +32,7 @@ impl MenuBar {
         menu
     }
 
-    pub fn add<'a>(
-        &'a mut self,
-        title: &str,
-        f: impl FnOnce(&mut NSMenu) -> (),
-    ) -> Id<NSMenu, Shared> {
+    pub fn add(&mut self, title: &str, f: impl FnOnce(&mut NSMenu)) -> Id<NSMenu, Shared> {
         let mut menu = NSMenu::new_with_title(title);
         f(&mut menu);
         self.add_menu(menu)
