@@ -8,6 +8,10 @@ use objc2::{class, msg_send, sel};
 pub struct MenuBar(Id<NSMenu, Owned>);
 
 impl MenuBar {
+    pub unsafe fn from_raw(menu: Id<NSMenu, Owned>) -> Self {
+        Self(menu)
+    }
+
     pub fn into_raw(self) -> Id<NSMenu, Owned> {
         self.0
     }
