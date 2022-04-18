@@ -35,17 +35,21 @@ fn main() {
                 {
                     autoreleasepool(|pool| {
                         let app = unsafe { InitializedApplication::new() };
-                        let menubar = app.menubar(pool).unwrap();
-                        // Yeah, this is not ok but we'll do it for now
-                        let menubar: Id<NSMenu, Owned> =
-                            unsafe { Id::retain(NonNull::from(menubar)) };
-                        let mut menubar = unsafe { MenuBar::from_raw(menubar) };
+                        // let menubar = app.menubar(pool).unwrap();
+                        // // Yeah, this is not ok but we'll do it for now
+                        // let menubar: Id<NSMenu, Owned> =
+                        //     unsafe { Id::retain(NonNull::from(menubar)) };
+                        // let mut menubar = unsafe { MenuBar::from_raw(menubar) };
+                        let mut menubar = MenuBar::new(|menu| {
+                            menu.add(NSMenuItem::new("Some item", "", None));
+                        });
 
                         let window_menu = menubar.add("Window menu", |menu| {
                             menu.add(NSMenuItem::new("Will be above the window data", "", None));
                         });
 
                         app.set_window_menu(&window_menu);
+                        app.set_menubar(menubar);
                     });
                 }
             }
