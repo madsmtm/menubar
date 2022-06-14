@@ -6,7 +6,7 @@ use objc2::rc::{autoreleasepool, AutoreleasePool, Id, Owned, Shared};
 use objc2::runtime::Object;
 use objc2::{class, msg_send, sel};
 use objc2::{Encoding, Message, RefEncode};
-use objc2_foundation::{INSString, NSString};
+use objc2_foundation::NSString;
 
 use super::menuitem::NSMenuItem;
 
@@ -40,7 +40,7 @@ impl NSMenu {
 
     pub fn new() -> Id<Self, Owned> {
         let ptr = Self::alloc();
-        unsafe { Id::new(msg_send![ptr, init]) }
+        unsafe { Id::new(msg_send![ptr, init]).unwrap() }
     }
 
     // Public only locally to allow for construction in Menubar
@@ -49,7 +49,7 @@ impl NSMenu {
     pub(super) fn new_with_title(title: &str) -> Id<Self, Owned> {
         let title = NSString::from_str(title);
         let ptr = Self::alloc();
-        unsafe { Id::new(msg_send![ptr, initWithTitle: &*title]) }
+        unsafe { Id::new(msg_send![ptr, initWithTitle: &*title]).unwrap() }
     }
 
     // Title (only useful for MenuBar!)

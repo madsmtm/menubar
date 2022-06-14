@@ -1,12 +1,11 @@
 #[cfg(target_os = "macos")]
-use menubar::appkit::{InitializedApplication, MenuBar, NSMenu, NSMenuItem};
+use menubar::appkit::{InitializedApplication, MenuBar, NSMenuItem};
 #[cfg(target_os = "macos")]
-use objc2::rc::{autoreleasepool, Id, Owned};
+use objc2::rc::autoreleasepool;
 use std::collections::HashMap;
-use std::ptr::NonNull;
 use winit::{
     event::{ElementState, Event, KeyboardInput, StartCause, WindowEvent},
-    event_loop::EventLoop,
+    event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
 
@@ -33,7 +32,7 @@ fn main() {
 
                 #[cfg(target_os = "macos")]
                 {
-                    autoreleasepool(|pool| {
+                    autoreleasepool(|_pool| {
                         let app = unsafe { InitializedApplication::new() };
                         // let menubar = app.menubar(pool).unwrap();
                         // // Yeah, this is not ok but we'll do it for now

@@ -5,8 +5,8 @@ use objc2::rc::{autoreleasepool, AutoreleasePool, Id, Owned, Shared};
 use objc2::runtime::{Bool, Object};
 use objc2::{class, msg_send, sel};
 use objc2::{Encoding, Message, RefEncode};
-use objc2_foundation::{INSString, NSString};
 use std::ptr::NonNull;
+use objc2_foundation::NSString;
 
 use super::menu::NSMenu;
 
@@ -50,7 +50,7 @@ impl NSMenuItem {
     // Public only locally to allow for construction in Menubar
     pub(super) fn new_empty() -> Id<Self, Owned> {
         let ptr = Self::alloc();
-        unsafe { Id::new(msg_send![ptr, init]) }
+        unsafe { Id::new(msg_send![ptr, init]).unwrap() }
     }
 
     #[doc(alias = "initWithTitle")]
@@ -75,6 +75,7 @@ impl NSMenuItem {
                 action: action,
                 keyEquivalent: &*key_equivalent,
             ])
+            .unwrap()
         }
     }
 
@@ -84,7 +85,7 @@ impl NSMenuItem {
         // TODO: Find an ergonomic API where we don't need to retain. Also,
         // this has a memory leak if there's no `autoreleasepool` to release
         // the returned pointer.
-        unsafe { Id::retain(NonNull::new_unchecked(ptr)) }
+        unsafe { Id::retain(ptr).unwrap_unchecked() }
     }
 
     // fn new_separator<'p>(pool: &'p AutoreleasePool) -> &'p mut Self {
