@@ -20,11 +20,14 @@ categories = [
 
 [dependencies]
 raw-window-handle = { version = "0.5", default-features = false }
-slab = "0.4.7"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = { version = "=0.3.0-beta.0" }
 objc2-foundation = { version = "=0.2.0-alpha.5" }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+ahash = { version = "0.8.2", default-features = false, features = ["std"] }
+tinyvec = { version = "1.6.0", features = ["alloc"] }
 
 [target.'cfg(target_os = "windows")'.dependencies.windows-sys]
 version = "0.42"

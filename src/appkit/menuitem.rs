@@ -5,8 +5,8 @@ use objc2::rc::{autoreleasepool, AutoreleasePool, Id, Owned, Shared};
 use objc2::runtime::{Bool, Object};
 use objc2::{class, msg_send, sel};
 use objc2::{Encoding, Message, RefEncode};
-use std::ptr::NonNull;
 use objc2_foundation::NSString;
+use std::ptr::NonNull;
 
 use super::menu::NSMenu;
 

@@ -9,6 +9,7 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::mem;
 use std::num::NonZeroIsize;
+use std::ptr;
 use std::rc::Rc;
 
 use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
@@ -16,24 +17,15 @@ use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows_sys::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
 
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    CreateMenu, CreatePopupMenu, DestroyMenu, GetMenu, InsertMenuItemA, SetMenu, SetMenuInfo, MIIM_ID,
+    AppendMenuA, AppendMenuW, CreateMenu, CreatePopupMenu, DestroyMenu, GetMenu, InsertMenuItemA,
+    SetMenu, SetMenuInfo, MIIM_ID,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{HMENU, MENUINFO, MENUITEMINFOA};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    MFT_SEPARATOR, MFT_STRING, MIIM_DATA, MIIM_FTYPE, MIIM_STRING, MIIM_SUBMENU, MIIM_TYPE,
-    MIM_STYLE, MNS_NOTIFYBYPOS, WM_MENUCOMMAND, WM_NCDESTROY,
+    MFT_SEPARATOR, MFT_STRING, MF_POPUP, MF_SEPARATOR, MF_STRING, MIIM_DATA, MIIM_FTYPE,
+    MIIM_STRING, MIIM_SUBMENU, MIIM_TYPE, MIM_STYLE, MNS_NOTIFYBYPOS, WM_COMMAND, WM_MENUCOMMAND,
+    WM_NCDESTROY,
 };
-
-#[derive(Debug)]
-pub struct NotProperWindow;
-
-impl fmt::Display for NotProperWindow {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("the given window is not a proper window")
-    }
-}
-
-impl std::error::Error for NotProperWindow {}
 
 macro_rules! syscall {
     // The null value (0) is an error.
@@ -49,6 +41,127 @@ macro_rules! syscall {
 
 // No one else should use this very unique ID.
 const SUBCLASS_ID: usize = 4 * 8 * 15 * 16 * 23 * 42;
+
+/// A handle that manages a menu key.
+struct MenuKeyHandle {
+    key: MenuKey,
+    unsend: PhantomData<*mut ()>,
+}
+
+impl MenuKeyHandle {
+    /// Create a new menu key handle.
+    fn new() -> Self {
+        std::thread_local! {
+            static SLOT_LIST: RefCell<SlotList> = RefCell::new(SlotList {
+                menu_keys: Vec::new(),
+                next_key: 0,
+                len: 0,
+            });
+        }
+
+        struct SlotList {
+            /// A list of menu keys indicating whether they have been freed or not.
+            menu_keys: Vec<Slot>,
+
+            /// The next menu key to use.
+            next_key: u16,
+
+            /// The current number of occupied slots in the menu key list.
+            len: u16,
+        }
+
+        enum Slot {
+            /// This slot is occupied.
+            Occupied,
+
+            /// This slot is free.
+            ///
+            /// The value inside is the value that should be set to `NEXT_KEY`
+            /// when this slot is occupied.
+            Vacant(u16),
+        }
+
+        impl Drop for MenuKeyHandle {
+            fn drop(&mut self) {
+                // Free a slot in the key list.
+                let _ = SLOT_LIST.try_with(|slot_list| {
+                    let mut slot_list = slot_list.borrow_mut();
+
+                    // Decrement length by one.
+                    let new_len = slot_list
+                        .len
+                        .checked_sub(1)
+                        .expect("menu key list is corrupt");
+                    slot_list.len = new_len;
+
+                    // Mark the slot at vacant.
+                    let our_key = self.key.0;
+                    slot_list.menu_keys[our_key as usize] = Slot::Vacant(slot_list.next_key);
+                    slot_list.next_key = our_key;
+                });
+            }
+        }
+
+        SLOT_LIST.with(|slot_list| {
+            let mut slot_list = slot_list.borrow_mut();
+            let our_key = slot_list.next_key;
+
+            // Increment length by one.
+            {
+                let new_len = slot_list.len.checked_add(1).expect("too many menu keys");
+                slot_list.len = new_len;
+            }
+
+            if slot_list.next_key == slot_list.menu_keys.len() as _ {
+                // Allocate a new slot at the end of the list.
+                slot_list.menu_keys.push(Slot::Occupied);
+                slot_list.next_key += 1;
+            } else {
+                // Take the vacant slot.
+                slot_list.next_key = match slot_list.menu_keys.get(our_key as usize) {
+                    Some(Slot::Vacant(next_key)) => *next_key,
+                    _ => panic!("menu key list is corrupt"),
+                };
+                slot_list.menu_keys[our_key as usize] = Slot::Occupied;
+            }
+
+            MenuKeyHandle {
+                key: MenuKey(our_key),
+                unsend: PhantomData,
+            }
+        })
+    }
+
+    /// Get the underlying menu key.
+    fn key(&self) -> MenuKey {
+        self.key
+    }
+}
+
+/// Key given to a menu.
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct MenuKey(u16);
+
+/// Key given to an item in a menu.
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct ItemKey(u32);
+
+impl ItemKey {
+    /// Create a new `ItemKey` from a menu handle and an item ID.
+    fn new(menu: MenuKey, id: u16) -> Self {
+        ItemKey(((menu.0 as u32) << 16) | (id as u32))
+    }
+
+    /// Get the menu key.
+    fn menu(&self) -> MenuKey {
+        MenuKey((self.0 >> 16) as u16)
+    }
+
+    /// Get the item ID.
+    fn id(&self) -> u16 {
+        self.0 as u16
+    }
+}
 
 unsafe extern "system" fn menu_subclass_proc(
     hwnd: HWND,
@@ -77,18 +190,17 @@ unsafe extern "system" fn menu_subclass_proc(
 
         // If we are being destroyed, free our refdata.
         if msg == WM_NCDESTROY {
-            drop(Box::from_raw(refdata as *mut DataMapCell));
+            drop(Box::from_raw(refdata as *mut WindowData));
             early_out!();
-        } else if msg == WM_MENUCOMMAND {
+        } else if msg == WM_COMMAND {
             // Get a reference to the hash map containing our menu item data.
-            let map_cell = &*(refdata as *const DataMapCell);
+            let map_cell = &*(refdata as *const WindowData);
 
             // Shouldn't be called reentrantly.
-            let mut map = map_cell.borrow_mut();
+            let mut map = map_cell.data.borrow_mut();
 
             // Get the item key.
-            let hmenu = leap!(NonZeroIsize::new(lparam as _));
-            let key = ItemKey(hmenu, wparam);
+            let key = ItemKey(wparam as u32);
 
             // Get the item data.
             let data = leap!(map.get_mut(&key));
@@ -109,11 +221,15 @@ pub struct Hotkey<'a> {
     key: &'a str,
 }
 
-type DataMap = HashMap<ItemKey, MenuItemData>;
-type DataMapCell = RefCell<DataMap>;
+type DataTable = HashMap<ItemKey, MenuItemData, ahash::RandomState>;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
-struct ItemKey(NonZeroIsize, usize);
+struct WindowData {
+    /// The table of menu item data.
+    data: RefCell<DataTable>,
+
+    /// The menu IDs we are currently holding.
+    _ids: Vec<MenuKeyHandle>,
+}
 
 /// A menu to be attached to a window.
 pub struct Menu {
@@ -126,10 +242,13 @@ pub struct Menu {
     menu: Option<NonZeroIsize>,
 
     /// Data associated with the menu.
-    data: DataMap,
+    data: DataTable,
 
-    /// Total number of top-level items in the menu.
-    len: usize,
+    /// The menu IDs we are currently holding.
+    menu_id: Vec<MenuKeyHandle>,
+
+    /// The next item ID to use.
+    next_id: u16,
 
     /// Menus are not thread-safe.
     _marker: PhantomData<*mut ()>,
@@ -140,15 +259,6 @@ impl Menu {
     pub fn new() -> Result<Self, Error> {
         // Create the menu.
         let menu = syscall!(nul CreateMenu());
-
-        // Set up the menu so WM_MENUCOMMAND gets used.
-        let info = MENUINFO {
-            cbSize: mem::size_of::<MENUINFO>() as _,
-            fMask: MIM_STYLE,
-            dwStyle: MNS_NOTIFYBYPOS,
-            ..unsafe { mem::zeroed() }
-        };
-        syscall!(nul SetMenuInfo(menu, &info));
 
         unsafe { Ok(Menu::from_hmenu(menu)) }
     }
@@ -164,8 +274,9 @@ impl Menu {
     unsafe fn from_hmenu(menu: HMENU) -> Self {
         Menu {
             menu: Some(NonZeroIsize::new_unchecked(menu)),
-            data: HashMap::new(),
-            len: 0,
+            data: DataTable::with_hasher(ahash::RandomState::new()),
+            menu_id: vec![MenuKeyHandle::new()],
+            next_id: 0,
             _marker: PhantomData,
         }
     }
@@ -177,41 +288,26 @@ impl Menu {
     ) -> Result<(), Error> {
         // Create the menu item.
         let item = item.into();
+        let hmenu = self.menu.unwrap().get();
+
         match item.inner {
             Inner::Separator => {
-                // Menu item is a separator.
-                let info = MENUITEMINFOA {
-                    cbSize: mem::size_of::<MENUITEMINFOA>() as _,
-                    fMask: MIIM_FTYPE,
-                    fType: MFT_SEPARATOR,
-                    ..unsafe { mem::zeroed() }
-                };
-
-                // Insert the menu item.
-                syscall!(nul InsertMenuItemA(self.menu.unwrap().get(), self.len as _, true as _, &info));
+                syscall!(nul AppendMenuA(hmenu, MF_SEPARATOR, 0, ptr::null_mut()));
             }
 
             Inner::Submenu { text, mut submenu } => {
                 // Menu item is a submenu.
-                let handle = submenu.menu.take().unwrap();
-                let items = mem::take(&mut submenu.data);
+                let handle = submenu.menu.take().unwrap().get();
+                let items = mem::replace(
+                    &mut submenu.data,
+                    DataTable::with_hasher(ahash::RandomState::new()),
+                );
 
                 // Append items to our items.
                 self.data.extend(items.into_iter());
 
                 let text = CString::new(text).unwrap();
-
-                let info = MENUITEMINFOA {
-                    cbSize: mem::size_of::<MENUITEMINFOA>() as _,
-                    fMask: MIIM_FTYPE | MIIM_SUBMENU | MIIM_TYPE,
-                    fType: MFT_STRING,
-                    hSubMenu: handle.get(),
-                    dwTypeData: text.as_ptr() as _,
-                    ..unsafe { mem::zeroed() }
-                };
-
-                // Insert the menu item.
-                syscall!(nul InsertMenuItemA(self.menu.unwrap().get(), self.len as _, true as _, &info));
+                syscall!(nul AppendMenuA(hmenu, MF_POPUP, handle as _, text.as_ptr().cast()));
             }
 
             Inner::Item {
@@ -220,7 +316,14 @@ impl Menu {
                 mut handler,
             } => {
                 // Create a new item key.
-                let key = ItemKey(self.menu.unwrap(), self.len);
+                let key = {
+                    let new_key = ItemKey::new(self.menu_id[0].key, self.next_id);
+
+                    let next_id = self.next_id.checked_add(1).expect("menu item ID overflow");
+                    self.next_id = next_id;
+
+                    new_key
+                };
 
                 // Add this key to our map.
                 self.data.insert(
@@ -231,33 +334,15 @@ impl Menu {
                 );
 
                 let text = CString::new(text).unwrap();
-
-                let info = MENUITEMINFOA {
-                    cbSize: mem::size_of::<MENUITEMINFOA>() as _,
-                    fMask: MIIM_FTYPE | MIIM_TYPE | MIIM_ID,
-                    fType: MFT_STRING,
-                    wID: 42,
-                    dwTypeData: text.as_ptr() as _,
-                    cch: text.as_bytes().len() as _,
-                    ..unsafe { mem::zeroed() }
-                };
-
-                // Insert the menu item.
-                syscall!(nul InsertMenuItemA(self.menu.unwrap().get(), self.len as _, true as _, &info));
+                syscall!(nul AppendMenuA(hmenu, MF_STRING, key.0 as _, text.as_ptr().cast()));
             }
         };
-
-        // Increment the length.
-        self.len += 1;
 
         Ok(())
     }
 
     /// Apply this menu to a raw window handle.
-    pub fn apply(
-        self,
-        handle: impl raw_window_handle::HasRawWindowHandle
-    ) -> Result<(), Error> {
+    pub fn apply(self, handle: impl raw_window_handle::HasRawWindowHandle) -> Result<(), Error> {
         match handle.raw_window_handle() {
             raw_window_handle::RawWindowHandle::Win32(handle) => unsafe {
                 if handle.hwnd.is_null() {
@@ -282,7 +367,10 @@ impl Menu {
         SetMenu(hwnd, self.menu.take().unwrap().get());
 
         // Add a subclass to the window.
-        let data = mem::take(&mut self.data);
+        let data = mem::replace(
+            &mut self.data,
+            HashMap::with_hasher(ahash::RandomState::new()),
+        );
         let data = Box::into_raw(Box::new(RefCell::new(data)));
         SetWindowSubclass(hwnd, Some(menu_subclass_proc), SUBCLASS_ID, data as _);
 
