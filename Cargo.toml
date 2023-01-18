@@ -18,14 +18,23 @@ categories = [
     "os::windows-apis",
 ]
 
+[dependencies]
+raw-window-handle = { version = "0.5", default-features = false }
+slab = "0.4.7"
+
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = { version = "=0.3.0-beta.0" }
 objc2-foundation = { version = "=0.2.0-alpha.5" }
 
-[target.'cfg(target_os = "windows")'.dependencies]
-winapi = { version = "0.3", features = ["winuser", "libloaderapi", "wincon"] }
+[target.'cfg(target_os = "windows")'.dependencies.windows-sys]
+version = "0.42"
+features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging"
+]
 
 [dev-dependencies]
-winit = "0.26"
-raw-window-handle = "0.4"
+winit = { version = "0.27", default-features = false }
 env_logger = "0.9"
