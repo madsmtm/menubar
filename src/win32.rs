@@ -371,7 +371,7 @@ impl Menu {
             &mut self.data,
             HashMap::with_hasher(ahash::RandomState::new()),
         );
-        let data = Box::into_raw(Box::new(RefCell::new(data)));
+        let data = Box::into_raw(Box::new(data));
         SetWindowSubclass(hwnd, Some(menu_subclass_proc), SUBCLASS_ID, data as _);
 
         Ok(())
