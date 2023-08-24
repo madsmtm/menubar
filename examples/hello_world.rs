@@ -15,15 +15,14 @@ use std::error::Error;
 #[cfg(target_os = "macos")]
 use std::ptr;
 #[cfg(target_os = "macos")]
-use winit::platform::macos::EventLoopExtMacOS;
+use winit::platform::macos::EventLoopBuilderExtMacOS;
 #[cfg(target_os = "windows")]
 use winit::platform::windows::WindowBuilderExtWindows;
 use winit::{
-    event::{
-        DeviceEvent, ElementState, Event, KeyboardInput, StartCause, VirtualKeyCode, WindowEvent,
-    },
-    event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
+    event::{DeviceEvent, ElementState, Event, KeyEvent, StartCause, WindowEvent},
+    event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
+    keyboard::{Key, KeyCode},
+    window::{Window, WindowBuilder},
 };
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -313,9 +312,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         menu
     };
 
-    let mut event_loop = EventLoop::new();
-
-    event_loop.set_activation_policy(winit::platform::macos::ActivationPolicy::Regular);
+    let event_loop = EventLoopBuilder::new()
+        .with_activation_policy(winit::platform::macos::ActivationPolicy::Regular)
+        .build()?;
 
     let builder = WindowBuilder::new()
         .with_title("test")
@@ -357,10 +356,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             Event::WindowEvent {
                 event:
                     WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
+                        event:
+                            KeyEvent {
                                 state,
-                                virtual_keycode: Some(VirtualKeyCode::Return),
+                                logical_key: Key::Enter,
                                 ..
                             },
                         ..
@@ -382,10 +381,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             Event::WindowEvent {
                 event:
                     WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
+                        event:
+                            KeyEvent {
                                 state: ElementState::Pressed,
-                                virtual_keycode: Some(VirtualKeyCode::Escape),
+                                logical_key: Key::Escape,
                                 ..
                             },
                         ..
@@ -397,10 +396,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             Event::WindowEvent {
                 event:
                     WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
+                        event:
+                            KeyEvent {
                                 state: ElementState::Pressed,
-                                virtual_keycode: Some(VirtualKeyCode::X),
+                                physical_key: KeyCode::KeyX,
                                 ..
                             },
                         ..
@@ -421,7 +420,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 println!("The close button was pressed; stopping");
                 *control_flow = ControlFlow::Exit
             }
-            Event::MainEventsCleared => {
+            Event::AboutToWait => {
                 // Application update code.
 
                 // Queue a RedrawRequested event.
@@ -438,7 +437,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 // this event rather than in MainEventsCleared, since rendering in here allows
                 // the program to gracefully handle redraws requested by the OS.
             }
-            Event::LoopDestroyed => {
+            Event::LoopExiting => {
                 dbg!("Loop destroyed");
                 #[cfg(target_os = "windows")]
                 unsafe {
@@ -461,10 +460,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 requested_resume: None,
                 ..
             }) => (),
-            Event::RedrawEventsCleared => (),
             _ => {
                 // dbg!(&event);
             }
         }
-    });
+    })?;
+
+    Ok(())
 }
