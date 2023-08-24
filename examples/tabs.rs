@@ -2,15 +2,15 @@
 use menubar::appkit::{InitializedApplication, MenuBar, NSMenuItem};
 #[cfg(target_os = "macos")]
 use objc2::rc::autoreleasepool;
-use std::collections::HashMap;
+use std::{collections::HashMap, error::Error};
 use winit::{
-    event::{ElementState, Event, KeyboardInput, StartCause, WindowEvent},
+    event::{ElementState, Event, KeyEvent, StartCause, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
 
-fn main() {
-    let event_loop = EventLoop::new();
+fn main() -> Result<(), Box<dyn Error>> {
+    let event_loop = EventLoop::new()?;
 
     let mut windows = HashMap::new();
     for _ in 0..2 {
@@ -59,8 +59,8 @@ fn main() {
                         windows.remove(&window_id);
                     }
                     WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
+                        event:
+                            KeyEvent {
                                 state: ElementState::Pressed,
                                 ..
                             },
@@ -75,5 +75,7 @@ fn main() {
             }
             _ => (),
         }
-    })
+    })?;
+
+    Ok(())
 }
