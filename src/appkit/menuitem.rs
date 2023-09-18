@@ -1,17 +1,19 @@
+use core::ffi;
+use core::fmt;
 use core::mem;
-use core::{ffi, fmt, ptr};
-use objc2::ffi::NSInteger;
-use objc2::rc::{autoreleasepool, AutoreleasePool, Id, Owned, Shared};
-use objc2::runtime::{Bool, Object};
-use objc2::{class, msg_send, sel};
-use objc2::{Encoding, Message, RefEncode};
-use objc2_foundation::NSString;
-use std::ptr::NonNull;
+use core::ptr;
 
-use super::menu::NSMenu;
+use icrate::AppKit::{
+    NSControlStateValueMixed, NSControlStateValueOff, NSControlStateValueOn, NSMenu, NSMenuItem,
+};
+use icrate::Foundation::{NSInteger, NSString};
+use objc2::rc::Id;
+use objc2::runtime::{AnyObject, Sel};
+use objc2::ClassType;
 
-struct Target; // Normal NSObject. Should return YES in worksWhenModal.
-struct ActionSelector; // objc::Sel - a method selector
+use super::MenuWrapper;
+
+type Target = AnyObject; // Normal NSObject. Should return YES in worksWhenModal.
 struct Image;
 
 #[derive(Debug, PartialEq)]
@@ -23,74 +25,39 @@ pub enum MenuItemState {
     Off,
 }
 
-#[repr(C)]
-pub struct NSMenuItem {
-    _priv: [u8; 0],
-}
+#[derive(PartialEq, Eq, Hash, Clone)]
+pub struct MenuItemWrapper(pub Id<NSMenuItem>);
 
-unsafe impl RefEncode for NSMenuItem {
-    const ENCODING_REF: Encoding<'static> = Encoding::Object;
-}
-
-unsafe impl Message for NSMenuItem {}
-
-unsafe impl Send for NSMenuItem {}
-unsafe impl Sync for NSMenuItem {}
-
-impl NSMenuItem {
+impl MenuItemWrapper {
     // Defaults:
     //     State: NSOffState
     //     On-state image: Check mark
     //     Mixed-state image: Dash
 
-    fn alloc() -> *mut Self {
-        unsafe { msg_send![class!(NSMenuItem), alloc] }
-    }
-
     // Public only locally to allow for construction in Menubar
-    pub(super) fn new_empty() -> Id<Self, Owned> {
-        let ptr = Self::alloc();
-        unsafe { Id::new(msg_send![ptr, init]).unwrap() }
+    pub(super) fn new_empty() -> Self {
+        Self(unsafe { NSMenuItem::init(NSMenuItem::alloc()) })
     }
 
     #[doc(alias = "initWithTitle")]
     #[doc(alias = "initWithTitle:action:keyEquivalent:")]
-    pub fn new(
-        title: &str,
-        key_equivalent: &str,
-        action: Option<NonNull<ffi::c_void>>,
-    ) -> Id<Self, Owned> {
+    pub fn new(title: &str, key_equivalent: &str, action: Option<Sel>) -> Self {
         let title = NSString::from_str(title);
         let key_equivalent = NSString::from_str(key_equivalent);
-        let action = if let Some(p) = action {
-            p.as_ptr()
-        } else {
-            ptr::null_mut()
-        };
-        let ptr = Self::alloc();
-        unsafe {
-            Id::new(msg_send![
-                ptr,
-                initWithTitle: &*title,
-                action: action,
-                keyEquivalent: &*key_equivalent,
-            ])
-            .unwrap()
-        }
+        Self(unsafe {
+            NSMenuItem::initWithTitle_action_keyEquivalent(
+                NSMenuItem::alloc(),
+                &title,
+                action,
+                &key_equivalent,
+            )
+        })
     }
 
     #[doc(alias = "separatorItem")]
-    pub fn new_separator() -> Id<Self, Owned> {
-        let ptr: *mut Self = unsafe { msg_send![class!(NSMenuItem), separatorItem] };
-        // TODO: Find an ergonomic API where we don't need to retain. Also,
-        // this has a memory leak if there's no `autoreleasepool` to release
-        // the returned pointer.
-        unsafe { Id::retain(ptr).unwrap_unchecked() }
+    pub fn new_separator() -> Self {
+        Self(unsafe { NSMenuItem::separatorItem() })
     }
-
-    // fn new_separator<'p>(pool: &'p AutoreleasePool) -> &'p mut Self {
-    //     unsafe { msg_send![class!(NSMenuItem), separatorItem] }
-    // }
 
     // Enabling
 
@@ -100,7 +67,7 @@ impl NSMenuItem {
 
     #[doc(alias = "setEnabled")]
     #[doc(alias = "setEnabled:")]
-    fn set_enabled(&mut self, state: bool) {
+    fn set_enabled(&self, state: bool) {
         unimplemented!()
     }
 
@@ -110,15 +77,13 @@ impl NSMenuItem {
     ///
     /// If hidden, it does not appear in a menu and does not participate in command key matching.
     pub fn hidden(&self) -> bool {
-        let hidden: Bool = unsafe { msg_send![self, isHidden] };
-        hidden.is_true()
+        unsafe { self.0.isHidden() }
     }
 
     #[doc(alias = "setHidden")]
     #[doc(alias = "setHidden:")]
-    pub fn set_hidden(&mut self, hidden: bool) {
-        let hidden = Bool::new(hidden);
-        unsafe { msg_send![self, setHidden: hidden] }
+    pub fn set_hidden(&self, hidden: bool) {
+        unsafe { self.0.setHidden(hidden) }
     }
 
     // #[doc(alias = "hiddenOrHasHiddenAncestor")]
@@ -134,39 +99,38 @@ impl NSMenuItem {
 
     #[doc(alias = "setTarget")]
     #[doc(alias = "setTarget:")]
-    fn set_target(&mut self, target: Target) {
+    fn set_target(&self, target: Target) {
         unimplemented!()
     }
 
-    fn action(&self) -> ActionSelector {
+    fn action(&self) -> Sel {
         unimplemented!()
     }
 
     #[doc(alias = "setAction")]
     #[doc(alias = "setAction:")]
-    fn set_action(&mut self, action: ActionSelector) {
+    fn set_action(&self, action: Sel) {
         unimplemented!()
     }
 
     // Title
 
-    pub fn title<'p>(&self, pool: &'p AutoreleasePool) -> &'p str {
-        let title: &NSString = unsafe { msg_send![self, title] };
-        title.as_str(pool)
+    pub fn title(&self) -> String {
+        unsafe { self.0.title().to_string() }
     }
 
     #[doc(alias = "setTitle")]
     #[doc(alias = "setTitle:")]
-    pub fn set_title(&mut self, title: &str) {
+    pub fn set_title(&self, title: &str) {
         let title = NSString::from_str(title);
-        unsafe { msg_send![self, setTitle: &*title] }
+        unsafe { self.0.setTitle(&title) };
     }
 
     // #[doc(alias = "attributedTitle")]
     // pub fn attributed_title(&self) -> ??? { unimplemented!() }
     // #[doc(alias = "setAttributedTitle")]
     // #[doc(alias = "setAttributedTitle:")]
-    // pub fn set_attributed_title(&mut self, title: ???) { unimplemented!() }
+    // pub fn set_attributed_title(&self, title: ???) { unimplemented!() }
 
     // Tag
 
@@ -176,36 +140,34 @@ impl NSMenuItem {
 
     #[doc(alias = "setTag")]
     #[doc(alias = "setTag:")]
-    fn set_tag(&mut self, tag: isize) {
+    fn set_tag(&self, tag: isize) {
         unimplemented!()
     }
 
     /// Get the menu item's state
     pub fn state(&self) -> MenuItemState {
-        let state: NSInteger = unsafe { msg_send![self, state] };
-        match state {
-            1 => MenuItemState::On,
-            -1 => MenuItemState::Mixed,
-            0 => MenuItemState::Off,
-            _ => unreachable!(),
+        let state = unsafe { self.0.state() };
+        if state == NSControlStateValueOn {
+            MenuItemState::On
+        } else if state == NSControlStateValueMixed {
+            MenuItemState::Mixed
+        } else if state == NSControlStateValueOff {
+            MenuItemState::Off
+        } else {
+            unreachable!()
         }
     }
 
     /// Set the menu item's state
     #[doc(alias = "setState")]
     #[doc(alias = "setState:")]
-    pub fn set_state(&mut self, state: MenuItemState) {
-        // TODO: Link or something to these?
-        // static const NSControlStateValue NSControlStateValueMixed = -1;
-        // static const NSControlStateValue NSControlStateValueOff = 0;
-        // static const NSControlStateValue NSControlStateValueOn = 1;
-
-        let state: NSInteger = match state {
-            MenuItemState::On => 1,
-            MenuItemState::Mixed => -1,
-            MenuItemState::Off => 0,
+    pub fn set_state(&self, state: MenuItemState) {
+        let state = match state {
+            MenuItemState::On => NSControlStateValueOn,
+            MenuItemState::Mixed => NSControlStateValueMixed,
+            MenuItemState::Off => NSControlStateValueOff,
         };
-        unsafe { msg_send![self, setState: state] }
+        unsafe { self.0.setState(state) };
     }
 
     // Images
@@ -216,18 +178,14 @@ impl NSMenuItem {
 
     #[doc(alias = "setImage")]
     #[doc(alias = "setImage:")]
-    fn set_image(&mut self, image: Option<&Image>) {
+    fn set_image(&self, image: Option<&Image>) {
         unimplemented!()
     }
 
     #[doc(alias = "onStateImage")]
     #[doc(alias = "offStateImage")]
     #[doc(alias = "mixedStateImage")]
-    fn image_for_state<'p>(
-        &self,
-        pool: &'p AutoreleasePool,
-        state: MenuItemState,
-    ) -> Option<&'p Image> {
+    fn image_for_state(&self, state: MenuItemState) -> Option<Id<Image>> {
         unimplemented!()
     }
 
@@ -237,29 +195,22 @@ impl NSMenuItem {
     #[doc(alias = "setOffStateImage:")]
     #[doc(alias = "setMixedStateImage")]
     #[doc(alias = "setMixedStateImage:")]
-    fn set_image_for_state(&mut self, state: MenuItemState, image: Option<&Image>) {
+    fn set_image_for_state(&self, state: MenuItemState, image: Option<&Image>) {
         unimplemented!()
     }
 
     // Submenus
 
-    pub fn submenu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p NSMenu> {
-        unsafe { msg_send![self, submenu] }
+    pub fn submenu(&self) -> Option<MenuWrapper> {
+        unsafe { self.0.submenu() }.map(MenuWrapper)
     }
 
     #[doc(alias = "setSubmenu")]
     #[doc(alias = "setSubmenu:")]
-    pub fn set_submenu(
-        &mut self,
-        mut menu: Option<Id<NSMenu, Owned>>,
-    ) -> Option<Id<NSMenu, Shared>> {
+    pub fn set_submenu(&self, menu: Option<MenuWrapper>) -> Option<MenuWrapper> {
         // The submenu must not already have a parent!
-        let ptr = match menu {
-            Some(ref mut menu) => &mut **menu as *mut NSMenu,
-            None => ptr::null_mut(),
-        };
-        let _: () = unsafe { msg_send![self, setSubmenu: ptr] };
-        menu.map(|obj| obj.into())
+        unsafe { self.0.setSubmenu(menu.as_ref().map(|menu| &*menu.0)) };
+        menu
     }
 
     #[doc(alias = "hasSubmenu")]
@@ -269,27 +220,26 @@ impl NSMenuItem {
 
     /// The parent submenu's menuitem
     #[doc(alias = "parentItem")]
-    fn parent_item<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p NSMenuItem> {
+    fn parent_item(&self) -> Option<Id<NSMenuItem>> {
         unimplemented!()
     }
 
     #[doc(alias = "isSeparatorItem")]
     pub fn separator(&self) -> bool {
         // TODO: Maybe call this is_separator?
-        let is_separator: Bool = unsafe { msg_send![self, isSeparatorItem] };
-        is_separator.is_true()
+        unsafe { self.0.isSeparatorItem() }
     }
 
     // Owning menu
 
     #[doc(alias = "menu")]
-    fn parent_menu<'p>(&self, pool: &'p AutoreleasePool) -> &'p NSMenu {
+    fn parent_menu(&self) -> Id<NSMenu> {
         unimplemented!()
     }
 
     #[doc(alias = "setMenu")]
     #[doc(alias = "setMenu:")]
-    fn set_parent_menu(&mut self, menu: &mut NSMenu) {
+    fn set_parent_menu(&self, menu: &NSMenu) {
         unimplemented!()
     }
 
@@ -308,7 +258,7 @@ impl NSMenuItem {
 
     #[doc(alias = "setAlternate")]
     #[doc(alias = "setAlternate:")]
-    fn set_alternate(&mut self, alternate: bool) {
+    fn set_alternate(&self, alternate: bool) {
         unimplemented!()
     }
 
@@ -321,7 +271,7 @@ impl NSMenuItem {
 
     #[doc(alias = "setIndentationLevel")]
     #[doc(alias = "setIndentationLevel:")]
-    fn set_indentation_level(&mut self, level: isize) {
+    fn set_indentation_level(&self, level: isize) {
         unimplemented!()
     }
 
@@ -334,32 +284,32 @@ impl NSMenuItem {
 
     #[doc(alias = "setToolTip")]
     #[doc(alias = "setToolTip:")]
-    fn set_tooltip(&mut self, tooltip: &str) {
+    fn set_tooltip(&self, tooltip: &str) {
         unimplemented!()
     }
 
     // Represented object (kinda like tags)
 
     #[doc(alias = "representedObject")]
-    fn represented_object(&self) -> *const Object {
+    fn represented_object(&self) -> *const AnyObject {
         unimplemented!()
     }
 
     #[doc(alias = "setRepresentedObject")]
     #[doc(alias = "setRepresentedObject:")]
-    fn set_represented_object(&mut self, tooltip: *mut Object) {
+    fn set_represented_object(&self, tooltip: *mut AnyObject) {
         unimplemented!()
     }
 
     // View - most other attributes are ignore if this is set
 
-    fn view(&self) -> *const Object {
+    fn view(&self) -> *const AnyObject {
         unimplemented!()
     }
 
     #[doc(alias = "setView")]
     #[doc(alias = "setView:")]
-    fn set_view(&mut self, tooltip: *mut Object) {
+    fn set_view(&self, tooltip: *mut AnyObject) {
         unimplemented!()
     }
 
@@ -376,124 +326,103 @@ impl NSMenuItem {
     // automatically enable and disable items based on context
 }
 
-impl PartialEq for NSMenuItem {
-    /// Pointer equality
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        core::ptr::eq(self, other)
-    }
-}
-
-impl fmt::Debug for NSMenuItem {
+impl fmt::Debug for MenuItemWrapper {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        autoreleasepool(|pool| {
-            f.debug_struct("NSMenuItem")
-                .field("id", &(self as *const Self))
-                .field("separator", &self.separator())
-                .field("title", &self.title(pool))
-                .field("hidden", &self.hidden())
-                .field("state", &self.state())
-                .field("submenu", &self.submenu(pool))
-                // TODO: parent?
-                .finish()
-        })
+        f.debug_struct("NSMenuItem")
+            .field("id", &(self as *const Self))
+            .field("separator", &self.separator())
+            .field("title", &self.title())
+            .field("hidden", &self.hidden())
+            .field("state", &self.state())
+            .field("submenu", &self.submenu())
+            // TODO: parent?
+            .finish()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::test_util::STRINGS;
+    use icrate::Foundation::MainThreadMarker;
 
-    fn for_each_item(_pool: &AutoreleasePool, mut f: impl FnMut(&mut NSMenuItem)) {
-        f(&mut *NSMenuItem::new_separator());
-        f(&mut *NSMenuItem::new_empty());
-        f(&mut *NSMenuItem::new("", "", None));
+    use super::*;
+    use crate::{appkit::MenuWrapper, test_util::STRINGS};
+
+    fn for_each_item(mut f: impl FnMut(&MenuItemWrapper)) {
+        f(&MenuItemWrapper::new_separator());
+        f(&MenuItemWrapper::new_empty());
+        f(&MenuItemWrapper::new("", "", None));
     }
 
     #[test]
     fn test_hidden() {
-        autoreleasepool(|pool| {
-            for_each_item(pool, |item| {
-                assert!(!item.hidden());
-                item.set_hidden(true);
-                assert!(item.hidden());
-                item.set_hidden(false);
-                assert!(!item.hidden());
-            })
-        });
+        for_each_item(|item| {
+            assert!(!item.hidden());
+            item.set_hidden(true);
+            assert!(item.hidden());
+            item.set_hidden(false);
+            assert!(!item.hidden());
+        })
     }
 
     #[test]
     fn test_title() {
-        autoreleasepool(|pool| {
-            for_each_item(pool, |item| {
-                STRINGS.iter().for_each(|&title| {
-                    item.set_title(title);
-                    assert_eq!(item.title(pool), title);
-                });
+        for_each_item(|item| {
+            STRINGS.iter().for_each(|&title| {
+                item.set_title(title);
+                assert_eq!(item.title(), title);
             });
         });
     }
 
     #[test]
     fn test_title_init() {
-        autoreleasepool(|pool| {
-            STRINGS.iter().for_each(|&title| {
-                let item = NSMenuItem::new(title, "", None);
-                assert_eq!(item.title(pool), title);
-            });
+        STRINGS.iter().for_each(|&title| {
+            let item = MenuItemWrapper::new(title, "", None);
+            assert_eq!(item.title(), title);
         });
     }
 
     #[test]
     fn test_title_default() {
-        autoreleasepool(|pool| {
-            let item = NSMenuItem::new_empty();
-            assert_eq!(item.title(pool), "NSMenuItem");
-            let item = NSMenuItem::new_separator();
-            assert_eq!(item.title(pool), "");
-        });
+        let item = MenuItemWrapper::new_empty();
+        assert_eq!(item.title(), "NSMenuItem");
+        let item = MenuItemWrapper::new_separator();
+        assert_eq!(item.title(), "");
     }
 
     #[test]
     fn test_separator() {
-        autoreleasepool(|_| {
-            let item = NSMenuItem::new_separator();
-            assert!(item.separator());
-            let item = NSMenuItem::new_empty();
-            assert!(!item.separator());
-            let item = NSMenuItem::new("", "", None);
-            assert!(!item.separator());
-        });
+        let item = MenuItemWrapper::new_separator();
+        assert!(item.separator());
+        let item = MenuItemWrapper::new_empty();
+        assert!(!item.separator());
+        let item = MenuItemWrapper::new("", "", None);
+        assert!(!item.separator());
     }
 
     #[test]
     fn test_state() {
-        autoreleasepool(|pool| {
-            for_each_item(pool, |item| {
-                assert_eq!(item.state(), MenuItemState::Off);
-                item.set_state(MenuItemState::On);
-                assert_eq!(item.state(), MenuItemState::On);
-                item.set_state(MenuItemState::Mixed);
-                assert_eq!(item.state(), MenuItemState::Mixed);
-                item.set_state(MenuItemState::Off);
-                assert_eq!(item.state(), MenuItemState::Off);
-            });
+        for_each_item(|item| {
+            assert_eq!(item.state(), MenuItemState::Off);
+            item.set_state(MenuItemState::On);
+            assert_eq!(item.state(), MenuItemState::On);
+            item.set_state(MenuItemState::Mixed);
+            assert_eq!(item.state(), MenuItemState::Mixed);
+            item.set_state(MenuItemState::Off);
+            assert_eq!(item.state(), MenuItemState::Off);
         });
     }
 
     #[test]
     fn test_submenu() {
-        autoreleasepool(|pool| {
-            for_each_item(pool, |item| {
-                assert!(item.submenu(pool).is_none());
-                let menu = NSMenu::new();
-                let menu = item.set_submenu(Some(menu));
-                assert_eq!(item.submenu(pool), menu.as_deref());
-                item.set_submenu(None);
-                assert!(item.submenu(pool).is_none());
-            })
-        });
+        let mtm = unsafe { MainThreadMarker::new_unchecked() };
+        for_each_item(|item| {
+            assert!(item.submenu().is_none());
+            let menu = MenuWrapper::new(mtm);
+            let menu = item.set_submenu(Some(menu));
+            assert_eq!(item.submenu(), menu);
+            item.set_submenu(None);
+            assert!(item.submenu().is_none());
+        })
     }
 }

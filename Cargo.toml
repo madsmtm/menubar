@@ -22,8 +22,20 @@ categories = [
 raw-window-handle = { version = "0.5", default-features = false }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-objc2 = { version = "=0.3.0-beta.0" }
-objc2-foundation = { version = "=0.2.0-alpha.5" }
+objc2 = "0.4.1"
+
+[target.'cfg(target_os = "macos")'.dependencies.icrate]
+version = "0.0.4"
+features = [
+    "Foundation",
+    "Foundation_NSString",
+    "Foundation_NSArray",
+    "Foundation_NSThread",
+    "AppKit",
+    "AppKit_NSMenu",
+    "AppKit_NSMenuItem",
+    "AppKit_NSApplication",
+]
 
 [target.'cfg(target_os = "windows")'.dependencies]
 ahash = { version = "0.8.2", default-features = false, features = ["std"] }

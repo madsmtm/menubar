@@ -3,13 +3,9 @@ mod menu;
 mod menubar;
 mod menuitem;
 
+pub use self::global::InitializedApplication;
+pub use self::menu::MenuWrapper;
 pub use self::menubar::MenuBar;
-pub use global::InitializedApplication;
-pub use menu::NSMenu;
-pub use menuitem::{MenuItemState, NSMenuItem};
-
-// We need the Objectice-C symbols like NSString, NSMenu and so on to be available
-#[link(name = "AppKit", kind = "framework")]
-extern "C" {}
-#[link(name = "Foundation", kind = "framework")]
-extern "C" {}
+pub use self::menuitem::{MenuItemState, MenuItemWrapper};
+pub use icrate::AppKit::{NSMenu, NSMenuDelegate, NSMenuItem};
+pub use icrate::Foundation::MainThreadMarker;

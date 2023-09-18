@@ -1,15 +1,16 @@
 #![allow(unused_imports)] // While testing
-use menubar::appkit::{MenuBar, NSMenu, NSMenuItem};
+use menubar::appkit::{MainThreadMarker, MenuBar, MenuItemWrapper, NSMenu, NSMenuItem};
 
 fn main() {
     // Dynamic content
     let _recent_projects = vec!["a", "a", "a"];
     let _recent_files = vec!["x", "y", "zwadjkwahjkdahsbjdlah"];
 
-    let mut menu_bar = MenuBar::new(|_menu| {});
+    let mtm = MainThreadMarker::new().unwrap();
+    let mut menu_bar = MenuBar::new(mtm, |_menu| {});
     menu_bar.add("File", |menu| {
-        menu.add(NSMenuItem::new("New File", "CMD+N", None));
-        menu.add(NSMenuItem::new("Open...", "CMD+O", None));
+        menu.add(MenuItemWrapper::new("New File", "CMD+N", None));
+        menu.add(MenuItemWrapper::new("Open...", "CMD+O", None));
         // // Has dynamic content
         // let open_recent_menu = NSMenu::new();
         // open_recent_menu.on_open(|menu| {

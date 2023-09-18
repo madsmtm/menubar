@@ -1,31 +1,14 @@
-use core::cell::UnsafeCell;
-use core::marker::PhantomData;
-use objc2::rc::{AutoreleasePool, Id, Owned, Shared};
-use objc2::runtime::{Bool, Class, Object};
-use objc2::{class, msg_send, sel};
-use objc2::{Encoding, Message, RefEncode};
+use icrate::AppKit::{NSApp, NSApplication, NSMenu};
+use icrate::Foundation::MainThreadMarker;
+use objc2::rc::Id;
 
-use super::menu::NSMenu;
 use super::menubar::MenuBar;
+use super::MenuWrapper;
 
 /// Helper to make various functions on the global application object safe.
-#[doc(alias = "NSApp")]
-#[doc(alias = "NSApplication")]
-#[repr(C)]
 pub struct InitializedApplication {
-    /// The application contains syncronization primitives that allows mutable
-    /// access with an immutable reference, and hence need to be `UnsafeCell`.
-    ///
-    /// TODO: Verify this claim.
-    _priv: UnsafeCell<[u8; 0]>,
+    app: Id<NSApplication>,
 }
-
-unsafe impl RefEncode for InitializedApplication {
-    const ENCODING_REF: Encoding<'static> = Encoding::Object;
-}
-
-unsafe impl Message for InitializedApplication {}
-unsafe impl Sync for InitializedApplication {}
 
 impl InitializedApplication {
     /// # Safety
@@ -33,31 +16,33 @@ impl InitializedApplication {
     /// This must not be called before `applicationDidFinishLaunching`.
     ///
     /// In `winit`, this is at or after
-    /// [`winit::event::StartCause::Init`] has been emitted.
+    /// `winit::event::StartCause::Init` has been emitted.
     #[doc(alias = "sharedApplication")]
-    pub unsafe fn new() -> &'static Self {
-        msg_send![class!(NSApplication), sharedApplication]
+    pub unsafe fn new(_mtm: MainThreadMarker) -> Self {
+        Self {
+            app: NSApplication::sharedApplication(),
+        }
     }
 
     #[doc(alias = "mainMenu")]
-    pub fn menubar<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p NSMenu> {
-        unsafe { msg_send![self, mainMenu] }
+    pub fn menubar(&self) -> Option<MenuWrapper> {
+        unsafe { self.app.mainMenu() }.map(MenuWrapper)
     }
 
     /// Setting the menubar to `null` does not work properly, so we don't allow
     /// that functionality here!
     #[doc(alias = "setMainMenu")]
     #[doc(alias = "setMainMenu:")]
-    pub fn set_menubar(&self, menubar: MenuBar) -> Id<NSMenu, Shared> {
+    pub fn set_menubar(&self, menubar: MenuBar) -> MenuWrapper {
         let menu = menubar.into_raw();
-        let _: () = unsafe { msg_send![self, setMainMenu: &*menu] };
-        menu.into()
+        unsafe { self.app.setMainMenu(Some(&menu.0)) };
+        menu
     }
 
     /// Returns the first menu set with [`set_window_menu`]
     #[doc(alias = "windowsMenu")]
-    pub fn window_menu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p NSMenu> {
-        unsafe { msg_send![self, windowsMenu] }
+    pub fn window_menu(&self) -> Option<MenuWrapper> {
+        unsafe { self.app.windowsMenu() }.map(MenuWrapper)
     }
 
     /// Set the global window menu.
@@ -76,15 +61,14 @@ impl InitializedApplication {
     /// though this is not recommended.
     #[doc(alias = "setWindowsMenu")]
     #[doc(alias = "setWindowsMenu:")]
-    pub fn set_window_menu(&self, menu: &NSMenu) {
-        // TODO: Is it safe to immutably set this?
-        unsafe { msg_send![self, setWindowsMenu: menu] }
+    pub fn set_window_menu(&self, menu: &MenuWrapper) {
+        unsafe { self.app.setWindowsMenu(Some(&menu.0)) }
     }
 
     /// Returns the first menu set with [`set_services_menu`]
     #[doc(alias = "servicesMenu")]
-    pub fn services_menu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p NSMenu> {
-        unsafe { msg_send![self, servicesMenu] }
+    pub fn services_menu(&self) -> Option<MenuWrapper> {
+        unsafe { self.app.servicesMenu() }.map(MenuWrapper)
     }
 
     /// Set the global services menu.
@@ -99,19 +83,19 @@ impl InitializedApplication {
     /// more than once, but this is really flaky.
     #[doc(alias = "setServicesMenu")]
     #[doc(alias = "setServicesMenu:")]
-    pub fn set_services_menu(&self, menu: &NSMenu) {
+    pub fn set_services_menu(&self, menu: &MenuWrapper) {
         // TODO: Is it safe to immutably set this?
         // TODO: The menu should (must?) not contain any items!
         // TODO: Setting this and pressing the close button doesn't work in winit
-        unsafe { msg_send![self, setServicesMenu: menu] }
+        unsafe { self.app.setServicesMenu(Some(&menu.0)) }
     }
 
     // TODO: registerServicesMenuSendTypes
 
     /// Get the menu that is currently assigned as the help menu, or `None` if the system is configured to autodetect this.
     #[doc(alias = "helpMenu")]
-    pub fn help_menu<'p>(&self, pool: &'p AutoreleasePool) -> Option<&'p NSMenu> {
-        unsafe { msg_send![self, helpMenu] }
+    pub fn help_menu(&self) -> Option<MenuWrapper> {
+        unsafe { self.app.helpMenu() }.map(MenuWrapper)
     }
 
     /// Set the global menu that should have the spotlight Help Search
@@ -122,17 +106,16 @@ impl InitializedApplication {
     /// To prevent this, specify a menu that does not appear anywhere.
     #[doc(alias = "setHelpMenu")]
     #[doc(alias = "setHelpMenu:")]
-    pub fn set_help_menu(&self, menu: Option<&NSMenu>) {
+    pub fn set_help_menu(&self, menu: Option<&MenuWrapper>) {
         // TODO: Is it safe to immutably set this?
-        unsafe { msg_send![self, setHelpMenu: menu] }
+        unsafe { self.app.setHelpMenu(menu.map(|menu| &*menu.0)) }
     }
 
     // TODO: applicationDockMenu (the application delegate should implement this function)
 
     #[doc(alias = "menuBarVisible")]
     pub fn menubar_visible(&self) -> bool {
-        let visible: Bool = unsafe { msg_send![class!(NSMenu), menuBarVisible] };
-        visible.is_true()
+        unsafe { NSMenu::menuBarVisible() }
     }
 
     /// Hide or show the menubar for the entire application.
@@ -142,8 +125,7 @@ impl InitializedApplication {
     #[doc(alias = "setMenuBarVisible")]
     #[doc(alias = "setMenuBarVisible:")]
     pub fn set_menubar_visible(&self, visible: bool) {
-        let visible = Bool::new(visible);
-        unsafe { msg_send![class!(NSMenu), setMenuBarVisible: visible] }
+        unsafe { NSMenu::setMenuBarVisible(visible) }
     }
 
     // Only available on the global menu bar object
@@ -156,15 +138,13 @@ impl InitializedApplication {
 
 #[cfg(test)]
 mod tests {
-    use objc2::rc::autoreleasepool;
-
     use super::*;
 
-    fn init_app() -> &'static InitializedApplication {
+    fn init_app() -> InitializedApplication {
         unimplemented!()
     }
 
-    fn create_menu() -> Id<NSMenu, Owned> {
+    fn create_menu() -> MenuWrapper {
         unimplemented!()
     }
 
@@ -175,16 +155,14 @@ mod tests {
         let menu1 = create_menu();
         let menu2 = create_menu();
 
-        autoreleasepool(|pool| {
-            assert!(app.services_menu(pool).is_none());
+        assert!(app.services_menu().is_none());
 
-            app.set_services_menu(&menu1);
-            assert_eq!(app.services_menu(pool).unwrap(), &*menu1);
+        app.set_services_menu(&menu1);
+        assert_eq!(app.services_menu().unwrap(), menu1);
 
-            app.set_services_menu(&menu2);
-            assert_eq!(app.services_menu(pool).unwrap(), &*menu2);
+        app.set_services_menu(&menu2);
+        assert_eq!(app.services_menu().unwrap(), menu2);
 
-            // At this point `menu1` still shows as a services menu...
-        });
+        // At this point `menu1` still shows as a services menu...
     }
 }
