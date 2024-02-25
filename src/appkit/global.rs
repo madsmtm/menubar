@@ -1,6 +1,7 @@
 use icrate::AppKit::{NSApp, NSApplication, NSMenu};
 use icrate::Foundation::MainThreadMarker;
 use objc2::rc::Id;
+use objc2::{msg_send, msg_send_id};
 
 use super::menubar::MenuBar;
 use super::MenuWrapper;
@@ -24,6 +25,7 @@ impl InitializedApplication {
         }
     }
 
+    /// Corresponds to the `systemMenu = "main"` key in storyboards.
     #[doc(alias = "mainMenu")]
     pub fn menubar(&self) -> Option<MenuWrapper> {
         unsafe { self.app.mainMenu() }.map(MenuWrapper)
@@ -40,6 +42,8 @@ impl InitializedApplication {
     }
 
     /// Returns the first menu set with [`set_window_menu`]
+    ///
+    /// Corresponds to the `systemMenu = "window"` key in storyboards.
     #[doc(alias = "windowsMenu")]
     pub fn window_menu(&self) -> Option<MenuWrapper> {
         unsafe { self.app.windowsMenu() }.map(MenuWrapper)
@@ -66,6 +70,8 @@ impl InitializedApplication {
     }
 
     /// Returns the first menu set with [`set_services_menu`]
+    ///
+    /// Corresponds to the `systemMenu = "services"` key in storyboards.
     #[doc(alias = "servicesMenu")]
     pub fn services_menu(&self) -> Option<MenuWrapper> {
         unsafe { self.app.servicesMenu() }.map(MenuWrapper)
@@ -93,6 +99,8 @@ impl InitializedApplication {
     // TODO: registerServicesMenuSendTypes
 
     /// Get the menu that is currently assigned as the help menu, or `None` if the system is configured to autodetect this.
+    ///
+    /// Corresponds to the `systemMenu = "help"` key in storyboards.
     #[doc(alias = "helpMenu")]
     pub fn help_menu(&self) -> Option<MenuWrapper> {
         unsafe { self.app.helpMenu() }.map(MenuWrapper)
@@ -109,6 +117,22 @@ impl InitializedApplication {
     pub fn set_help_menu(&self, menu: Option<&MenuWrapper>) {
         // TODO: Is it safe to immutably set this?
         unsafe { self.app.setHelpMenu(menu.map(|menu| &*menu.0)) }
+    }
+
+    /// Removed from headers, this is a no-op by now.
+    ///
+    /// Corresponds to the `systemMenu = "apple"` key in storyboards.
+    #[doc(alias = "appleMenu")]
+    pub fn apple_menu(&self) -> Option<MenuWrapper> {
+        let menu: Option<Id<NSMenu>> = unsafe { msg_send_id![&self.app, appleMenu] };
+        menu.map(MenuWrapper)
+    }
+
+    #[doc(alias = "setAppleMenu")]
+    #[doc(alias = "setAppleMenu:")]
+    pub fn set_apple_menu(&self, menu: Option<&MenuWrapper>) {
+        let menu: Option<&NSMenu> = menu.map(|menu| &*menu.0);
+        unsafe { msg_send![&self.app, setAppleMenu: menu] }
     }
 
     // TODO: applicationDockMenu (the application delegate should implement this function)
@@ -134,6 +158,9 @@ impl InitializedApplication {
     //     let height: CGFloat = unsafe { msg_send![self, menuBarHeight] };
     //     height
     // }
+
+    // TODO: `systemMenu = "recentDocuments"` key in storyboards.
+    // TODO: `systemMenu = "font"` key in storyboards.
 }
 
 #[cfg(test)]

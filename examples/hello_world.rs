@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
     #[cfg(target_os = "macos")]
-    let (menubar, window_menu, services_menu, help_menu) = {
+    let (menubar, window_menu, services_menu, help_menu, apple_menu) = {
         let mtm = MainThreadMarker::new().unwrap();
         let mut services_menu = None;
 
@@ -230,7 +230,17 @@ fn main() -> Result<(), Box<dyn Error>> {
             assert_eq!(menu.len(), COUNT);
         });
 
-        (menubar, window_menu, services_menu.unwrap(), help_menu)
+        let apple_menu = menubar.add("apple menu", |menu| {
+            menu.add(MenuItemWrapper::new("FOO", "", None));
+        });
+
+        (
+            menubar,
+            window_menu,
+            services_menu.unwrap(),
+            help_menu,
+            apple_menu,
+        )
     };
 
     // #[cfg(target_os = "macos")]
@@ -355,6 +365,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     app.set_window_menu(&window_menu);
                     app.set_services_menu(&services_menu);
                     app.set_help_menu(Some(&help_menu));
+                    // app.set_apple_menu(Some(&apple_menu));
 
                     let menubar = app.set_menubar(menubar.take().unwrap());
                     assert_eq!(menubar, app.menubar().unwrap());
